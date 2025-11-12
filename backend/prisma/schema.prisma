@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Instrument {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique
+  color      String?
+  musicians  Musician[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Musician {
+  id              Int              @id @default(autoincrement())
+  firstName       String
+  lastName        String
+  color           String?
+  email           String?
+  phone           String?
+  instrumentId    Int
+  instrument      Instrument       @relation(fields: [instrumentId], references: [id])
+  presences       Presence[]
+  eventAssignments EventMusician[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([lastName, firstName])
+  @@unique([firstName, lastName], name: "musician_first_last")
+}
+
+model Event {
+  id              Int             @id @default(autoincrement())
+  title           String
+  description     String?
+  date            DateTime
+  location        String?
+  price           String?
+  organizer       String?
+  presences       Presence[]
+  assignments     EventMusician[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([title, date], name: "event_title_date")
+}
+
+model AttendanceStatus {
+  id         Int        @id @default(autoincrement())
+  label      String     @unique
+  color      String?
+  presences  Presence[]
+  isDefault  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Presence {
+  id             Int              @id @default(autoincrement())
+  eventId        Int
+  musicianId     Int
+  statusId       Int
+  comment        String?
+  respondedAt    DateTime         @default(now())
+  event          Event            @relation(fields: [eventId], references: [id])
+  musician       Musician         @relation(fields: [musicianId], references: [id])
+  status         AttendanceStatus @relation(fields: [statusId], references: [id])
+
+  @@unique([eventId, musicianId], name: "presence_event_musician")
+}
+
+model EventMusician {
+  id          Int       @id @default(autoincrement())
+  eventId     Int
+  musicianId  Int
+  isRequired  Boolean   @default(true)
+  notes       String?
+  event       Event     @relation(fields: [eventId], references: [id])
+  musician    Musician  @relation(fields: [musicianId], references: [id])
+
+  @@unique([eventId, musicianId], name: "assignment_event_musician")
+}
