@@ -346,7 +346,378 @@ Pour utiliser PostgreSQL ou MySQL en production :
    npm run prisma:migrate
    ```
 
-## 📝 Notes
+## � Déploiement en production
+
+### Prérequis serveur
+
+- Serveur Linux (Ubuntu/Debian recommandé)
+- Node.js 20+ installé
+- Nginx installé
+- Certificat SSL (Let's Encrypt recommandé)
+- Nom de domaine configuré (ex: concert.ligugesocial.club)
+- Accès SSH au serveur
+
+### Étape 1 : Préparation du serveur
+
+#### 1.1 Connexion au serveur
+
+```bash
+ssh user@concert.ligugesocial.club
+```
+
+#### 1.2 Installation de Node.js (si nécessaire)
+
+```bash
+# Installer Node.js 20.x
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Vérifier l'installation
+node --version
+npm --version
+```
+
+#### 1.3 Installation de Nginx (si nécessaire)
+
+```bash
+sudo apt update
+sudo apt install nginx -y
+```
+
+#### 1.4 Installation de PM2 (gestionnaire de processus)
+
+```bash
+sudo npm install -g pm2
+```
+
+### Étape 2 : Déploiement du backend
+
+#### 2.1 Créer le dossier de l'application
+
+```bash
+sudo mkdir -p /var/www/open_fanfare
+sudo chown -R $USER:$USER /var/www/open_fanfare
+cd /var/www/open_fanfare
+```
+
+#### 2.2 Cloner le dépôt
+
+```bash
+git clone https://github.com/julienrat/open_fanfare.git .
+```
+
+#### 2.3 Installer les dépendances du backend
+
+```bash
+cd backend
+npm install --production
+```
+
+#### 2.4 Configurer les variables d'environnement
+
+```bash
+nano .env
+```
+
+Contenu du fichier `.env` :
+
+```env
+NODE_ENV=production
+DATABASE_URL="file:./prisma/prod.db"
+ADMIN_SECRET="CHANGEZ_MOI_PAR_UN_SECRET_FORT"
+PORT=4000
+CORS_ORIGIN=https://concert.ligugesocial.club
+```
+
+**⚠️ Important** : Changez `ADMIN_SECRET` par un mot de passe fort et sécurisé !
+
+#### 2.5 Initialiser la base de données
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed
+```
+
+#### 2.6 Builder le backend (TypeScript → JavaScript)
+
+```bash
+npm run build
+```
+
+#### 2.7 Démarrer le backend avec PM2
+
+```bash
+pm2 start dist/server.js --name "open-fanfare-backend"
+pm2 save
+pm2 startup
+```
+
+Copiez et exécutez la commande fournie par `pm2 startup` pour que PM2 démarre automatiquement au démarrage du serveur.
+
+#### 2.8 Vérifier que le backend fonctionne
+
+```bash
+curl http://localhost:4000/health
+# Devrait retourner: {"status":"ok"}
+```
+
+### Étape 3 : Déploiement du frontend
+
+#### 3.1 Configurer les variables d'environnement du frontend
+
+```bash
+cd /var/www/open_fanfare/frontend
+nano .env.production
+```
+
+Contenu du fichier `.env.production` :
+
+```env
+VITE_API_URL=https://concert.ligugesocial.club/api
+```
+
+#### 3.2 Installer les dépendances
+
+```bash
+npm install
+```
+
+#### 3.3 Builder le frontend
+
+```bash
+npm run build
+```
+
+Cela va créer un dossier `dist/` avec les fichiers statiques optimisés.
+
+### Étape 4 : Configuration de Nginx
+
+#### 4.1 Créer la configuration Nginx
+
+```bash
+sudo nano /etc/nginx/sites-available/open-fanfare
+```
+
+Contenu du fichier :
+
+```nginx
+# Redirection HTTP → HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name concert.ligugesocial.club;
+    
+    return 301 https://$server_name$request_uri;
+}
+
+# Configuration HTTPS
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name concert.ligugesocial.club;
+
+    # Certificats SSL (à adapter selon votre configuration)
+    ssl_certificate /etc/letsencrypt/live/concert.ligugesocial.club/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/concert.ligugesocial.club/privkey.pem;
+    
+    # Configuration SSL recommandée
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Logs
+    access_log /var/log/nginx/open-fanfare-access.log;
+    error_log /var/log/nginx/open-fanfare-error.log;
+
+    # Frontend - Servir les fichiers statiques
+    root /var/www/open_fanfare/frontend/dist;
+    index index.html;
+
+    # Gestion du routing React (SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API - Proxy vers Node.js
+    location /api {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Cache pour les assets statiques
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+#### 4.2 Activer la configuration
+
+```bash
+sudo ln -s /etc/nginx/sites-available/open-fanfare /etc/nginx/sites-enabled/
+```
+
+#### 4.3 Tester la configuration Nginx
+
+```bash
+sudo nginx -t
+```
+
+Si tout est OK, vous devriez voir : `syntax is ok` et `test is successful`.
+
+#### 4.4 Redémarrer Nginx
+
+```bash
+sudo systemctl restart nginx
+```
+
+### Étape 5 : Configuration SSL avec Let's Encrypt (si nécessaire)
+
+Si vous n'avez pas encore de certificat SSL :
+
+```bash
+# Installer Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Obtenir un certificat SSL
+sudo certbot --nginx -d concert.ligugesocial.club
+
+# Renouvellement automatique (tester)
+sudo certbot renew --dry-run
+```
+
+### Étape 6 : Configuration du pare-feu
+
+```bash
+# Autoriser HTTP et HTTPS
+sudo ufw allow 'Nginx Full'
+
+# Si vous utilisez SSH
+sudo ufw allow OpenSSH
+
+# Activer le pare-feu
+sudo ufw enable
+```
+
+### Étape 7 : Vérification finale
+
+#### 7.1 Vérifier que le backend tourne
+
+```bash
+pm2 status
+pm2 logs open-fanfare-backend --lines 50
+```
+
+#### 7.2 Tester l'application
+
+Ouvrez votre navigateur et accédez à :
+- `https://concert.ligugesocial.club` - Interface publique
+- `https://concert.ligugesocial.club/admin` - Interface admin
+
+### Mises à jour de l'application
+
+Pour mettre à jour l'application après des modifications :
+
+```bash
+cd /var/www/open_fanfare
+
+# Récupérer les dernières modifications
+git pull origin main
+
+# Backend
+cd backend
+npm install --production
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+pm2 restart open-fanfare-backend
+
+# Frontend
+cd ../frontend
+npm install
+npm run build
+
+# Pas besoin de redémarrer Nginx (fichiers statiques)
+```
+
+### Commandes utiles en production
+
+```bash
+# Voir les logs du backend
+pm2 logs open-fanfare-backend
+
+# Redémarrer le backend
+pm2 restart open-fanfare-backend
+
+# Arrêter le backend
+pm2 stop open-fanfare-backend
+
+# Voir l'utilisation des ressources
+pm2 monit
+
+# Voir les logs Nginx
+sudo tail -f /var/log/nginx/open-fanfare-error.log
+sudo tail -f /var/log/nginx/open-fanfare-access.log
+
+# Redémarrer Nginx
+sudo systemctl restart nginx
+```
+
+### Sauvegarde de la base de données
+
+```bash
+# Créer une sauvegarde
+cd /var/www/open_fanfare/backend
+cp prisma/prod.db prisma/backup-$(date +%Y%m%d-%H%M%S).db
+
+# Automatiser les sauvegardes quotidiennes (cron)
+crontab -e
+```
+
+Ajouter cette ligne pour une sauvegarde quotidienne à 2h du matin :
+
+```cron
+0 2 * * * cd /var/www/open_fanfare/backend && cp prisma/prod.db prisma/backup-$(date +\%Y\%m\%d).db && find prisma/backup-*.db -mtime +7 -delete
+```
+
+### Dépannage
+
+#### Le backend ne démarre pas
+
+```bash
+pm2 logs open-fanfare-backend --err --lines 100
+```
+
+#### Erreur 502 Bad Gateway
+
+- Vérifier que le backend tourne : `pm2 status`
+- Vérifier les logs Nginx : `sudo tail -f /var/log/nginx/open-fanfare-error.log`
+- Vérifier que le port 4000 est bien accessible : `curl http://localhost:4000/health`
+
+#### Problèmes CORS
+
+Vérifier que `CORS_ORIGIN` dans le `.env` du backend correspond bien à votre domaine :
+```env
+CORS_ORIGIN=https://concert.ligugesocial.club
+```
+
+#### L'interface admin ne fonctionne pas
+
+Vérifier que vous avez bien changé le mot de passe dans le `.env` :
+```env
+ADMIN_SECRET="votre-nouveau-mot-de-passe"
+```
+
+## �📝 Notes
 
 - L'interface publique ne nécessite **aucune authentification**
 - L'interface d'administration utilise une authentification par mot de passe (stocké dans localStorage)
