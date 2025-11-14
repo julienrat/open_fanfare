@@ -24,7 +24,11 @@ router.get("/", async (_req, res) => {
       assignments: {
         include: {
           musician: {
-            include: { instrument: true },
+            include: { 
+              instrument: {
+                include: { section: true }
+              }
+            },
           },
         },
         orderBy: {
@@ -35,7 +39,13 @@ router.get("/", async (_req, res) => {
       },
       presences: {
         include: {
-          musician: { include: { instrument: true } },
+          musician: { 
+            include: { 
+              instrument: {
+                include: { section: true }
+              }
+            }
+          },
           status: true,
         },
       },
@@ -58,13 +68,23 @@ router.get("/:id", async (req, res) => {
       assignments: {
         include: {
           musician: {
-            include: { instrument: true },
+            include: { 
+              instrument: {
+                include: { section: true }
+              }
+            },
           },
         },
       },
       presences: {
         include: {
-          musician: { include: { instrument: true } },
+          musician: { 
+            include: { 
+              instrument: {
+                include: { section: true }
+              }
+            }
+          },
           status: true,
         },
       },

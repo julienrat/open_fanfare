@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { AttendanceStatus, Event, Instrument, Musician } from './types'
+import type { AttendanceStatus, Event, Instrument, Musician, Section } from './types'
 
 const keys = {
   instruments: ['instruments'] as const,
   musicians: ['musicians'] as const,
   events: ['events'] as const,
   statuses: ['statuses'] as const,
+  sections: ['sections'] as const,
 }
 
 export const useInstruments = () =>
@@ -31,6 +32,12 @@ export const useStatuses = () =>
   useQuery<AttendanceStatus[]>({
     queryKey: keys.statuses,
     queryFn: api.listStatuses,
+  })
+
+export const useSections = () =>
+  useQuery<Section[]>({
+    queryKey: keys.sections,
+    queryFn: api.listSections,
   })
 
 export const useAdminMutations = () => {
@@ -135,6 +142,28 @@ export const useAdminMutations = () => {
       mutationFn: (id: number) => api.deleteStatus(id, ensureSecret()),
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: keys.statuses })
+      },
+    }),
+    createSection: useMutation({
+      mutationFn: (payload: Partial<Section>) =>
+        api.createSection(payload, ensureSecret()),
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: keys.sections })
+      },
+    }),
+    updateSection: useMutation({
+      mutationFn: ({ id, payload }: { id: number; payload: Partial<Section> }) =>
+        api.updateSection(id, payload, ensureSecret()),
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: keys.sections })
+        void queryClient.invalidateQueries({ queryKey: keys.instruments })
+      },
+    }),
+    deleteSection: useMutation({
+      mutationFn: (id: number) => api.deleteSection(id, ensureSecret()),
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: keys.sections })
+        void queryClient.invalidateQueries({ queryKey: keys.instruments })
       },
     }),
   }

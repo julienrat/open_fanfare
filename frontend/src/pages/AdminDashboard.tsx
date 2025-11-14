@@ -7,7 +7,9 @@ import {
   useEvents,
   useInstruments,
   useMusicians,
+  useSections,
 } from '../api/queries'
+import { downloadICalFile } from '../api/icalExport'
 import type { Event } from '../api/types'
 
 const toDateTimeLocalValue = (isoDate: string) => {
@@ -18,13 +20,19 @@ const toDateTimeLocalValue = (isoDate: string) => {
 
 const formatDate = (iso: string) => format(new Date(iso), 'dd/MM/yyyy HH:mm', { locale: fr })
 
-export const AdminDashboardPage = () => {
+interface AdminDashboardPageProps {
+  onLogout: () => void
+}
+
+export const AdminDashboardPage = ({ onLogout }: AdminDashboardPageProps) => {
   const { data: instruments } = useInstruments()
   const { data: musicians } = useMusicians()
   const { data: events } = useEvents()
+  const { data: sections } = useSections()
 
   const {
     createInstrument,
+    updateInstrument,
     deleteInstrument,
     createMusician,
     updateMusician,
@@ -33,18 +41,26 @@ export const AdminDashboardPage = () => {
     updateEvent,
     deleteEvent,
     importMusicians,
+    createSection,
+    updateSection,
+    deleteSection,
   } = useAdminMutations()
 
-  const [adminSecretInput, setAdminSecretInput] = useState(() => {
-    if (typeof window === 'undefined') return ''
-    return window.localStorage.getItem('adminSecret') ?? ''
+  const [sectionForm, setSectionForm] = useState({
+    name: '',
+    color: '',
   })
-  const [secretSaved, setSecretSaved] = useState(false)
+  const [editingSectionId, setEditingSectionId] = useState<number | null>(null)
+  const [showSectionsList, setShowSectionsList] = useState(false)
 
   const [instrumentForm, setInstrumentForm] = useState({
     name: '',
     color: '',
+    sectionId: '',
   })
+  const [editingInstrumentId, setEditingInstrumentId] = useState<number | null>(null)
+
+  const [showMusiciansList, setShowMusiciansList] = useState(false)
 
   const [musicianForm, setMusicianForm] = useState({
     firstName: '',
@@ -75,20 +91,44 @@ export const AdminDashboardPage = () => {
     [events]
   )
 
-  const handleSecretSave = () => {
-    window.localStorage.setItem('adminSecret', adminSecretInput)
-    setSecretSaved(true)
-    setTimeout(() => setSecretSaved(false), 1500)
+  const handleSubmitSection = async (event: FormEvent) => {
+    event.preventDefault()
+    try {
+      const payload = {
+        name: sectionForm.name,
+        color: sectionForm.color || undefined,
+      }
+
+      if (editingSectionId) {
+        await updateSection.mutateAsync({ id: editingSectionId, payload })
+      } else {
+        await createSection.mutateAsync(payload)
+      }
+
+      setSectionForm({ name: '', color: '' })
+      setEditingSectionId(null)
+    } catch (error) {
+      window.alert((error as Error).message)
+    }
   }
 
   const handleSubmitInstrument = async (event: FormEvent) => {
     event.preventDefault()
     try {
-      await createInstrument.mutateAsync({
+      const payload = {
         name: instrumentForm.name,
         color: instrumentForm.color || undefined,
-      })
-      setInstrumentForm({ name: '', color: '' })
+        sectionId: instrumentForm.sectionId ? Number(instrumentForm.sectionId) : undefined,
+      }
+
+      if (editingInstrumentId) {
+        await updateInstrument.mutateAsync({ id: editingInstrumentId, payload })
+      } else {
+        await createInstrument.mutateAsync(payload)
+      }
+
+      setInstrumentForm({ name: '', color: '', sectionId: '' })
+      setEditingInstrumentId(null)
     } catch (error) {
       window.alert((error as Error).message)
     }
@@ -216,35 +256,132 @@ export const AdminDashboardPage = () => {
 
   return (
     <div className="page admin-page">
-      <h1 className="page-title">Administration</h1>
-      <p className="page-subtitle">
-        Gérez les référentiels (statuts, instruments, musiciens) et organisez les concerts.
-      </p>
-
-      <section className="admin-card">
-        <header className="admin-card-header">
-          <h2>Mot de passe administrateur</h2>
-          <p>Ce mot de passe est requis pour les actions de gestion. Il est conservé localement.</p>
-        </header>
-        <div className="admin-card-content">
-          <div className="form-grid">
-            <label className="form-field">
-              <span>Mot de passe</span>
-              <input
-                type="password"
-                value={adminSecretInput}
-                onChange={(event) => setAdminSecretInput(event.target.value)}
-                placeholder="Saisissez le mot de passe configuré côté serveur"
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <button type="button" className="primary-button" onClick={handleSecretSave}>
-              Enregistrer
-            </button>
-            {secretSaved ? <span className="success-text">Sauvegardé ✓</span> : null}
-          </div>
+      <div className="admin-header-wrapper">
+        <div>
+          <h1 className="page-title">Administration</h1>
+          <p className="page-subtitle">
+            Gérez les référentiels (statuts, instruments, musiciens) et organisez les concerts.
+          </p>
         </div>
+        <button type="button" className="ghost-button" onClick={onLogout}>
+          🚪 Déconnexion
+        </button>
+      </div>
+
+      <section className="admin-grid">
+        <article className="admin-card">
+          <header className="admin-card-header">
+            <h2>Pupitres</h2>
+            <p>Créez les pupitres pour regrouper les instruments.</p>
+          </header>
+          <div className="admin-card-content">
+            <form className="form" onSubmit={handleSubmitSection}>
+              <div className="form-grid">
+                <label className="form-field">
+                  <span>Nom</span>
+                  <input
+                    value={sectionForm.name}
+                    onChange={(event) =>
+                      setSectionForm((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Couleur (hex)</span>
+                  <input
+                    value={sectionForm.color}
+                    onChange={(event) =>
+                      setSectionForm((prev) => ({ ...prev, color: event.target.value }))
+                    }
+                    placeholder="#60a5fa"
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                {editingSectionId ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => {
+                        setEditingSectionId(null)
+                        setSectionForm({ name: '', color: '' })
+                      }}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={updateSection.isPending}
+                    >
+                      {updateSection.isPending ? 'Mise à jour…' : 'Mettre à jour'}
+                    </button>
+                  </>
+                ) : (
+                  <button type="submit" className="primary-button" disabled={createSection.isPending}>
+                    {createSection.isPending ? 'Ajout…' : 'Ajouter'}
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {showSectionsList ? (
+              <ul className="items-list">
+                {(sections ?? []).map((section) => (
+                  <li key={section.id}>
+                    <div className="item-line">
+                      <div className="item-meta">
+                        <span
+                          className="color-dot"
+                          style={{ backgroundColor: section.color ?? '#c4b5fd' }}
+                          aria-hidden
+                        />
+                        <strong>{section.name}</strong>
+                      </div>
+                      <div className="action-group">
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingSectionId(section.id)
+                            setSectionForm({
+                              name: section.name,
+                              color: section.color ?? '',
+                            })
+                          }}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => deleteSection.mutate(section.id)}
+                          disabled={deleteSection.isPending}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <div className="form-actions" style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setShowSectionsList((prev) => !prev)}
+              >
+                {showSectionsList
+                  ? 'Masquer la liste'
+                  : `Afficher la liste (${(sections ?? []).length} pupitre${(sections ?? []).length > 1 ? 's' : ''})`}
+              </button>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section className="admin-grid">
@@ -277,10 +414,48 @@ export const AdminDashboardPage = () => {
                   />
                 </label>
               </div>
+              <label className="form-field">
+                <span>Pupitre</span>
+                <select
+                  value={instrumentForm.sectionId}
+                  onChange={(event) =>
+                    setInstrumentForm((prev) => ({ ...prev, sectionId: event.target.value }))
+                  }
+                >
+                  <option value="">Aucun</option>
+                  {(sections ?? []).map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {section.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="form-actions">
-                <button type="submit" className="primary-button" disabled={createInstrument.isPending}>
-                  {createInstrument.isPending ? 'Ajout…' : 'Ajouter'}
-                </button>
+                {editingInstrumentId ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => {
+                        setEditingInstrumentId(null)
+                        setInstrumentForm({ name: '', color: '', sectionId: '' })
+                      }}
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={updateInstrument.isPending}
+                    >
+                      {updateInstrument.isPending ? 'Mise à jour…' : 'Mettre à jour'}
+                    </button>
+                  </>
+                ) : (
+                  <button type="submit" className="primary-button" disabled={createInstrument.isPending}>
+                    {createInstrument.isPending ? 'Ajout…' : 'Ajouter'}
+                  </button>
+                )}
               </div>
             </form>
 
@@ -296,15 +471,34 @@ export const AdminDashboardPage = () => {
                           aria-hidden
                         />
                         <strong>{instrument.name}</strong>
+                        {instrument.section && (
+                          <span className="chip">{instrument.section.name}</span>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        className="ghost-button"
-                        onClick={() => deleteInstrument.mutate(instrument.id)}
-                        disabled={deleteInstrument.isPending}
-                      >
-                        Supprimer
-                      </button>
+                      <div className="action-group">
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingInstrumentId(instrument.id)
+                            setInstrumentForm({
+                              name: instrument.name,
+                              color: instrument.color ?? '',
+                              sectionId: instrument.sectionId ? String(instrument.sectionId) : '',
+                            })
+                          }}
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => deleteInstrument.mutate(instrument.id)}
+                          disabled={deleteInstrument.isPending}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -468,192 +662,253 @@ export const AdminDashboardPage = () => {
               ) : null}
             </div>
 
-            <ul className="items-list">
-              {(musicians ?? []).map((musician) => (
-                <li key={musician.id}>
-                  <div className="item-line">
-                    <div className="item-meta">
-                      <strong>
-                        {musician.firstName} {musician.lastName}
-                      </strong>
-                      <span className="chip">{musician.instrument.name}</span>
-                      {musician.email ? <span className="muted-text">{musician.email}</span> : null}
-                      {musician.phone ? <span className="muted-text">{musician.phone}</span> : null}
-                    </div>
-                    <div className="action-group">
+            {showMusiciansList ? (
+              <ul className="items-list">
+                {(musicians ?? []).map((musician) => (
+                  <li key={musician.id}>
+                    <div className="item-line">
+                      <div className="item-meta">
+                        <strong>
+                          {musician.firstName} {musician.lastName}
+                        </strong>
+                        <span className="chip">{musician.instrument.name}</span>
+                        {musician.email ? <span className="muted-text">{musician.email}</span> : null}
+                        {musician.phone ? <span className="muted-text">{musician.phone}</span> : null}
+                      </div>
+                      <div className="action-group">
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            setEditingMusicianId(musician.id)
+                            setMusicianForm({
+                              firstName: musician.firstName,
+                              lastName: musician.lastName,
+                              instrumentId: String(musician.instrumentId),
+                              color: musician.color ?? '',
+                              email: musician.email ?? '',
+                              phone: musician.phone ?? '',
+                            })
+                          }}
+                        >
+                          Modifier
+                        </button>
                       <button
                         type="button"
                         className="ghost-button"
-                        onClick={() => {
-                          setEditingMusicianId(musician.id)
-                          setMusicianForm({
-                            firstName: musician.firstName,
-                            lastName: musician.lastName,
-                            instrumentId: String(musician.instrumentId),
-                            color: musician.color ?? '',
-                            email: musician.email ?? '',
-                            phone: musician.phone ?? '',
-                          })
-                        }}
+                        onClick={() => deleteMusician.mutate(musician.id)}
+                        disabled={deleteMusician.isPending}
                       >
-                        Modifier
+                        Supprimer
                       </button>
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={() => deleteMusician.mutate(musician.id)}
-                      disabled={deleteMusician.isPending}
-                    >
-                      Supprimer
-                    </button>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            <div className="form-actions" style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setShowMusiciansList((prev) => !prev)}
+              >
+                {showMusiciansList
+                  ? 'Masquer la liste'
+                  : `Afficher la liste (${(musicians ?? []).length} musicien${(musicians ?? []).length > 1 ? 's' : ''})`}
+              </button>
+            </div>
           </div>
         </article>
+      </section>
 
-        <article className="admin-card">
-          <header className="admin-card-header">
+      {/* Section Concerts - Pleine largeur */}
+      <section className="admin-card full-width">
+        <header className="admin-card-header">
+          <div>
             <h2>Concerts</h2>
             <p>Organisez les concerts et affectez les musiciens attendus.</p>
-          </header>
-          <div className="admin-card-content">
-            <form className="form" onSubmit={handleSubmitEvent}>
+          </div>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => downloadICalFile(sortedEvents)}
+            title="Exporter tous les concerts au format iCal"
+          >
+            📅 Exporter iCal
+          </button>
+        </header>
+        <div className="admin-card-content">
+          {/* Formulaire */}
+          <form className="form" onSubmit={handleSubmitEvent}>
+            <label className="form-field">
+              <span>Titre</span>
+              <input
+                value={eventForm.title}
+                onChange={(event) => setEventForm((prev) => ({ ...prev, title: event.target.value }))}
+                required
+              />
+            </label>
+            <div className="form-grid">
               <label className="form-field">
-                <span>Titre</span>
+                <span>Date et heure</span>
                 <input
-                  value={eventForm.title}
-                  onChange={(event) => setEventForm((prev) => ({ ...prev, title: event.target.value }))}
+                  type="datetime-local"
+                  value={eventForm.date}
+                  onChange={(event) => setEventForm((prev) => ({ ...prev, date: event.target.value }))}
                   required
                 />
               </label>
-              <div className="form-grid">
-                <label className="form-field">
-                  <span>Date et heure</span>
-                  <input
-                    type="datetime-local"
-                    value={eventForm.date}
-                    onChange={(event) => setEventForm((prev) => ({ ...prev, date: event.target.value }))}
-                    required
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Lieu</span>
-                  <input
-                    value={eventForm.location}
-                    onChange={(event) =>
-                      setEventForm((prev) => ({ ...prev, location: event.target.value }))
-                    }
-                    placeholder="Ex. Place de la République"
-                  />
-                </label>
-              </div>
-              <div className="form-grid">
-                <label className="form-field">
-                  <span>Tarif</span>
-                  <input
-                    value={eventForm.price}
-                    onChange={(event) => setEventForm((prev) => ({ ...prev, price: event.target.value }))}
-                    placeholder="Participation libre, 10€, ..."
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Organisateur</span>
-                  <input
-                    value={eventForm.organizer}
-                    onChange={(event) =>
-                      setEventForm((prev) => ({ ...prev, organizer: event.target.value }))
-                    }
-                    placeholder="Association, mairie..."
-                  />
-                </label>
-              </div>
               <label className="form-field">
-                <span>Description</span>
-                <textarea
-                  value={eventForm.description}
+                <span>Lieu</span>
+                <input
+                  value={eventForm.location}
                   onChange={(event) =>
-                    setEventForm((prev) => ({ ...prev, description: event.target.value }))
+                    setEventForm((prev) => ({ ...prev, location: event.target.value }))
                   }
-                  rows={3}
-                  placeholder="Détails du concert, programme…"
+                  placeholder="Ex. Place de la République"
                 />
               </label>
-              <p className="muted-text">
-                Tous les musiciens disponibles seront automatiquement ajoutés à cet événement.
-              </p>
-              <div className="form-actions">
-                {editingEventId ? (
-                  <>
-                    <button type="button" className="ghost-button" onClick={resetEventForm}>
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="primary-button"
-                      disabled={updateEvent.isPending}
-                    >
-                      {updateEvent.isPending ? 'Mise à jour…' : 'Mettre à jour'}
-                    </button>
-                  </>
-                ) : (
-                  <button type="submit" className="primary-button" disabled={createEvent.isPending}>
-                    {createEvent.isPending ? 'Création…' : 'Créer'}
+            </div>
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Tarif</span>
+                <input
+                  value={eventForm.price}
+                  onChange={(event) => setEventForm((prev) => ({ ...prev, price: event.target.value }))}
+                  placeholder="Participation libre, 10€, ..."
+                />
+              </label>
+              <label className="form-field">
+                <span>Organisateur</span>
+                <input
+                  value={eventForm.organizer}
+                  onChange={(event) =>
+                    setEventForm((prev) => ({ ...prev, organizer: event.target.value }))
+                  }
+                  placeholder="Association, mairie..."
+                />
+              </label>
+            </div>
+            <label className="form-field">
+              <span>Description</span>
+              <textarea
+                value={eventForm.description}
+                onChange={(event) =>
+                  setEventForm((prev) => ({ ...prev, description: event.target.value }))
+                }
+                rows={3}
+                placeholder="Détails du concert, programme…"
+              />
+            </label>
+            <p className="muted-text">
+              Tous les musiciens disponibles seront automatiquement ajoutés à cet événement.
+            </p>
+            <div className="form-actions">
+              {editingEventId ? (
+                <>
+                  <button type="button" className="ghost-button" onClick={resetEventForm}>
+                    Annuler
                   </button>
-                )}
-              </div>
-            </form>
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={updateEvent.isPending}
+                  >
+                    {updateEvent.isPending ? 'Mise à jour…' : 'Mettre à jour'}
+                  </button>
+                </>
+              ) : (
+                <button type="submit" className="primary-button" disabled={createEvent.isPending}>
+                  {createEvent.isPending ? 'Création…' : 'Créer'}
+                </button>
+              )}
+            </div>
+          </form>
 
-            <div className="table-wrapper">
-              <table>
+          {/* Tableau en dessous */}
+          <div className="events-table-wrapper">
+            <table className="events-table">
                 <thead>
                   <tr>
                     <th>Titre</th>
                     <th>Date</th>
                     <th>Lieu</th>
-                    <th>Tarif</th>
-                    <th>Organisateur</th>
                     <th>Participants</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedEvents.map((concert) => (
-                    <tr key={concert.id}>
-                      <td>{concert.title}</td>
-                      <td>{formatDate(concert.date)}</td>
-                      <td>{concert.location ?? '—'}</td>
-                      <td>{concert.price ?? '—'}</td>
-                      <td>{concert.organizer ?? '—'}</td>
-                      <td>{concert.assignments.length}</td>
+                    <tr key={concert.id} className={editingEventId === concert.id ? 'editing' : ''}>
                       <td>
-                        <button
-                          type="button"
-                          className="ghost-button"
-                          onClick={() => {
-                            setEditingEventId(concert.id)
-                          }}
-                        >
-                          Charger
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost-button"
-                          onClick={() => handleDeleteEvent(concert)}
-                          disabled={deleteEvent.isPending}
-                        >
-                          Supprimer
-                        </button>
+                        <div className="event-title-cell">
+                          <strong>{concert.title}</strong>
+                          {concert.description && (
+                            <span className="event-description-preview">{concert.description}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="event-date-cell">
+                          {formatDate(concert.date)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="event-meta-cell">
+                          {concert.location && <span>📍 {concert.location}</span>}
+                          {concert.price && <span>💰 {concert.price}</span>}
+                          {concert.organizer && <span>👤 {concert.organizer}</span>}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge">{concert.assignments.length} musiciens</span>
+                      </td>
+                      <td>
+                        <div className="action-group">
+                          <button
+                            type="button"
+                            className="ghost-button"
+                            onClick={() => {
+                              setEditingEventId(concert.id)
+                              setEventForm({
+                                title: concert.title,
+                                description: concert.description ?? '',
+                                date: toDateTimeLocalValue(concert.date),
+                                location: concert.location ?? '',
+                                price: concert.price ?? '',
+                                organizer: concert.organizer ?? '',
+                              })
+                              // Scroll to form
+                              window.scrollTo({ top: 0, behavior: 'smooth' })
+                            }}
+                          >
+                            ✏️ Modifier
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button delete-button"
+                            onClick={() => handleDeleteEvent(concert)}
+                            disabled={deleteEvent.isPending}
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+                  {sortedEvents.length === 0 && (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        Aucun concert créé. Créez votre premier concert ci-dessus.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
-          </div>
-        </article>
+        </div>
       </section>
     </div>
   )

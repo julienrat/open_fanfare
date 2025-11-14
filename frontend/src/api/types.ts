@@ -1,7 +1,17 @@
+export type Section = {
+  id: number;
+  name: string;
+  color?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Instrument = {
   id: number;
   name: string;
   color?: string | null;
+  sectionId?: number | null;
+  section?: Section | null;
   createdAt: string;
   updatedAt: string;
 };

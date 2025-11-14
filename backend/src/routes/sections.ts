@@ -5,14 +5,13 @@ import { adminAuth } from "../middleware/adminAuth";
 
 const router = Router();
 
-const instrumentSchema = z.object({
+const sectionSchema = z.object({
   name: z.string().min(1),
   color: z
     .string()
     .regex(/^#([0-9a-fA-F]{3}){1,2}$/, "Couleur invalide")
     .optional()
     .nullable(),
-  sectionId: z.number().optional().nullable(),
 });
 
 const generateRandomColor = () =>
@@ -21,42 +20,40 @@ const generateRandomColor = () =>
     .padStart(6, "0")}`;
 
 router.get("/", async (_req, res) => {
-  const instruments = await prisma.instrument.findMany({
+  const sections = await prisma.section.findMany({
     orderBy: { name: "asc" },
-    include: { section: true },
   });
-  res.json(instruments);
+  res.json(sections);
 });
 
 router.post("/", adminAuth, async (req, res) => {
-  const parseResult = instrumentSchema.safeParse(req.body);
+  const parseResult = sectionSchema.safeParse(req.body);
 
   if (!parseResult.success) {
     return res.status(400).json({ errors: parseResult.error.flatten() });
   }
 
-  const { name, color, sectionId } = parseResult.data;
+  const { name, color } = parseResult.data;
 
-  const instrument = await prisma.instrument.create({
+  const section = await prisma.section.create({
     data: {
       name,
       color: color ?? generateRandomColor(),
-      sectionId: sectionId ?? null,
     },
   });
 
-  res.status(201).json(instrument);
+  res.status(201).json(section);
 });
 
 router.put("/:id", adminAuth, async (req, res) => {
-  const instrumentId = Number(req.params.id);
+  const sectionId = Number(req.params.id);
 
-  if (Number.isNaN(instrumentId)) {
+  if (Number.isNaN(sectionId)) {
     return res.status(400).json({ message: "Identifiant invalide" });
   }
 
-  const parseResult = instrumentSchema
-    .pick({ name: true, color: true, sectionId: true })
+  const parseResult = sectionSchema
+    .pick({ name: true, color: true })
     .partial()
     .safeParse(req.body);
 
@@ -65,33 +62,32 @@ router.put("/:id", adminAuth, async (req, res) => {
   }
 
   try {
-    const instrument = await prisma.instrument.update({
-      where: { id: instrumentId },
+    const section = await prisma.section.update({
+      where: { id: sectionId },
       data: {
         ...parseResult.data,
         ...(parseResult.data.color === null ? { color: generateRandomColor() } : {}),
       },
     });
-    res.json(instrument);
+    res.json(section);
   } catch (error) {
-    res.status(404).json({ message: "Instrument introuvable" });
+    res.status(404).json({ message: "Section introuvable" });
   }
 });
 
 router.delete("/:id", adminAuth, async (req, res) => {
-  const instrumentId = Number(req.params.id);
+  const sectionId = Number(req.params.id);
 
-  if (Number.isNaN(instrumentId)) {
+  if (Number.isNaN(sectionId)) {
     return res.status(400).json({ message: "Identifiant invalide" });
   }
 
   try {
-    await prisma.instrument.delete({ where: { id: instrumentId } });
+    await prisma.section.delete({ where: { id: sectionId } });
     res.status(204).send();
   } catch (error) {
-    res.status(404).json({ message: "Instrument introuvable" });
+    res.status(404).json({ message: "Section introuvable" });
   }
 });
 
 export default router;
-

@@ -11,10 +11,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Section {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  color       String?
+  instruments Instrument[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
 model Instrument {
   id         Int        @id @default(autoincrement())
   name       String     @unique
   color      String?
+  sectionId  Int?
+  section    Section?   @relation(fields: [sectionId], references: [id])
   musicians  Musician[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

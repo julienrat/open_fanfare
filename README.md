@@ -31,18 +31,25 @@ L'application se compose de deux parties :
 ## ✨ Fonctionnalités
 
 ### Interface publique
-- 📅 Affichage de la liste des événements à venir
-- ✅ Enregistrement de présence via un pop-up modal
-- 📊 Graphiques de participation par instrument (camemberts)
-- 👥 Liste des musiciens assignés à chaque événement
+- 📅 **Vue Présences** : Affichage de la liste des événements à venir avec enregistrement des présences
+- 📆 **Vue Agenda** : Calendrier mensuel des concerts avec statistiques de participation
+- ✅ Enregistrement de présence via un pop-up modal (Présent/Absent/Peut-être)
+- 📊 **Graphiques doubles** : Visualisation par pupitre ET par instrument (camemberts côte à côte)
+- � Affichage des commentaires des musiciens sous les graphiques
+- 👥 Liste des musiciens ayant répondu (masquage des "en attente")
+- 📥 **Export iCal** : Téléchargement des concerts au format .ics pour intégration dans Google Calendar, Outlook, etc.
 - 🎨 Interface moderne et responsive
 
 ### Interface d'administration
+- � **Connexion sécurisée** : Authentification avec mot de passe
+- 🎵 **Gestion des pupitres** : CRUD complet (Bois, Cuivres aigus, Cuivres graves, Basses, Percu, etc.)
+- 🎷 **Gestion des instruments** : CRUD complet avec assignation à un pupitre et couleurs personnalisées
 - 👤 **Gestion des musiciens** : CRUD complet (nom, prénom, instrument, email, téléphone, couleur)
-- 🎷 **Gestion des instruments** : Création et modification des instruments avec couleurs personnalisées
-- 🎪 **Gestion des événements** : Création de concerts avec date, lieu, organisateur, tarif, programme
+- 🎪 **Gestion des événements** : CRUD complet avec date, lieu, organisateur, tarif, description
 - 📥 **Import CSV** : Import en masse de musiciens depuis un fichier CSV
 - 🔄 **Assignation automatique** : Tous les musiciens sont automatiquement assignés lors de la création d'un événement
+- 👁️ **Listes masquables** : Instruments et musiciens masqués par défaut pour une interface épurée
+- 📅 **Export iCal** : Bouton d'export également disponible dans l'interface admin
 
 ## 📦 Prérequis
 
@@ -98,16 +105,16 @@ cp .env.example .env  # Si un fichier exemple existe
 
 ```env
 DATABASE_URL="file:./prisma/dev.db"
-ADMIN_SECRET="votre-secret-admin-personnalise"
+ADMIN_SECRET="cornichon"
 PORT=4000
-CORS_ORIGIN=http://localhost:5173
+CORS_ORIGIN=http://localhost:5174
 ```
 
 **Variables d'environnement :**
 - `DATABASE_URL` : Chemin vers la base de données SQLite (par défaut : `file:./prisma/dev.db`)
-- `ADMIN_SECRET` : Secret pour l'authentification admin (changez-le en production !)
+- `ADMIN_SECRET` : Mot de passe pour l'authentification admin (par défaut : "cornichon" - changez-le en production !)
 - `PORT` : Port du serveur backend (par défaut : 4000)
-- `CORS_ORIGIN` : Origine autorisée pour les requêtes CORS (par défaut : `http://localhost:5173`)
+- `CORS_ORIGIN` : Origine autorisée pour les requêtes CORS (ajuster selon le port du frontend)
 
 ### Initialisation de la base de données
 
@@ -222,8 +229,14 @@ open_fanfare/
 
 ### Endpoints admin (nécessitent l'en-tête `x-admin-secret`)
 
+#### Pupitres/Sections
+- `GET /api/sections` - Liste des pupitres
+- `POST /api/sections` - Créer un pupitre
+- `PUT /api/sections/:id` - Modifier un pupitre
+- `DELETE /api/sections/:id` - Supprimer un pupitre
+
 #### Instruments
-- `GET /api/instruments` - Liste des instruments
+- `GET /api/instruments` - Liste des instruments (avec relation section)
 - `POST /api/instruments` - Créer un instrument
 - `PUT /api/instruments/:id` - Modifier un instrument
 - `DELETE /api/instruments/:id` - Supprimer un instrument
@@ -336,9 +349,12 @@ Pour utiliser PostgreSQL ou MySQL en production :
 ## 📝 Notes
 
 - L'interface publique ne nécessite **aucune authentification**
-- L'interface d'administration utilise un simple secret via l'en-tête HTTP `x-admin-secret`
-- Pour la production, changez le `ADMIN_SECRET` et configurez un secret fort
+- L'interface d'administration utilise une authentification par mot de passe (stocké dans localStorage)
+- Le backend vérifie le secret via l'en-tête HTTP `x-admin-secret`
+- **Mot de passe par défaut** : "cornichon" (à changer en production !)
 - La base de données SQLite est adaptée au développement, mais PostgreSQL/MySQL sont recommandés pour la production
+- Les graphiques de statistiques affichent la répartition par **pupitre** et par **instrument**
+- Les fichiers iCal générés sont compatibles avec Google Calendar, Outlook, Apple Calendar, etc.
 
 ## 🤝 Contribution
 

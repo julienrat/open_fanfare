@@ -8,6 +8,11 @@
   -moz-osx-font-smoothing: grayscale;
   color: #0f172a;
   background-color: #f1f5f9;
+  
+  /* Theme variables */
+  --primary-color: #0ea5e9;
+  --secondary-color: #38bdf8;
+  --accent-color: #0369a1;
 }
 
 *,

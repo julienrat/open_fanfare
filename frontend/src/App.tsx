@@ -2,10 +2,12 @@ import { useMemo } from 'react'
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { PublicEventsPage } from './pages/PublicEvents'
-import { AdminDashboardPage } from './pages/AdminDashboard'
+import { AgendaPage } from './pages/Agenda'
+import { AdminDashboardWrapper } from './components/AdminDashboardWrapper'
 
 const navItems = [
   { to: '/', label: 'Présences' },
+  { to: '/agenda', label: 'Agenda' },
   { to: '/admin', label: 'Administration' },
 ]
 
@@ -15,6 +17,9 @@ const Navigation = () => {
   const activePath = useMemo(() => {
     if (location.pathname.startsWith('/admin')) {
       return '/admin'
+    }
+    if (location.pathname.startsWith('/agenda')) {
+      return '/agenda'
     }
     return '/'
   }, [location.pathname])
@@ -49,7 +54,8 @@ function App() {
       <main className="app-main app-container">
         <Routes>
           <Route path="/" element={<PublicEventsPage />} />
-          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/admin" element={<AdminDashboardWrapper />} />
         </Routes>
       </main>
       <footer className="app-footer">

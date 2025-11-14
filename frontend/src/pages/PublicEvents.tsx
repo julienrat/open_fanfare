@@ -65,6 +65,53 @@ export const PublicEventsPage = () => {
 
   const fallbackColors = ['#22c55e', '#0ea5e9', '#f97316', '#a855f7', '#ef4444', '#facc15']
 
+  const computeSectionData = (event: Event) => {
+    const counts = new Map<
+      number | string,
+      { name: string; color?: string | null; value: number }
+    >()
+
+    const appendCount = (sectionId: number | string, name: string, color?: string | null) => {
+      const existing = counts.get(sectionId)
+      if (existing) {
+        existing.value += 1
+      } else {
+        counts.set(sectionId, { name, color, value: 1 })
+      }
+    }
+
+    const defaultStatusId = defaultStatus?.id
+    const presentPresences =
+      defaultStatusId != null
+        ? event.presences.filter((presence) => presence.statusId === defaultStatusId)
+        : event.presences
+
+    if (presentPresences.length > 0) {
+      presentPresences.forEach((presence) => {
+        const section = presence.musician.instrument.section
+        if (section) {
+          appendCount(section.id, section.name, section.color)
+        } else {
+          appendCount('none', 'Sans pupitre', '#94a3b8')
+        }
+      })
+    } else {
+      event.assignments.forEach((assignment) => {
+        const section = assignment.musician.instrument.section
+        if (section) {
+          appendCount(section.id, section.name, section.color)
+        } else {
+          appendCount('none', 'Sans pupitre', '#94a3b8')
+        }
+      })
+    }
+
+    return Array.from(counts.values()).map((entry, index) => ({
+      ...entry,
+      color: entry.color ?? fallbackColors[index % fallbackColors.length],
+    }))
+  }
+
   const computeParticipationData = (event: Event) => {
     const counts = new Map<
       number,
@@ -183,6 +230,7 @@ export const PublicEventsPage = () => {
       <div className="cards-grid">
         {sortedEvents.map((event) => {
           const chartData = computeParticipationData(event)
+          const sectionData = computeSectionData(event)
           const filteredResponsesCount =
             defaultStatus?.id != null
               ? event.presences.filter((presence) => presence.statusId === defaultStatus.id).length
@@ -208,22 +256,27 @@ export const PublicEventsPage = () => {
               {event.assignments.length ? (
                 <div className="attendance-list">
                   {expandedEventId === event.id
-                    ? event.assignments.map((assignment) => {
-                        const presence = getPresenceForMusician(event, assignment.musicianId)
-                        return (
-                          <div key={assignment.id} className="attendance-item">
-                            <div className="attendance-info">
-                              <span className="attendance-name">
-                                {assignment.musician.firstName} {assignment.musician.lastName}
-                              </span>
-                              <span className="attendance-instrument">
-                                {assignment.musician.instrument.name}
-                              </span>
+                    ? event.assignments
+                        .filter((assignment) => {
+                          const presence = getPresenceForMusician(event, assignment.musicianId)
+                          return presence !== undefined
+                        })
+                        .map((assignment) => {
+                          const presence = getPresenceForMusician(event, assignment.musicianId)
+                          return (
+                            <div key={assignment.id} className="attendance-item">
+                              <div className="attendance-info">
+                                <span className="attendance-name">
+                                  {assignment.musician.firstName} {assignment.musician.lastName}
+                                </span>
+                                <span className="attendance-instrument">
+                                  {assignment.musician.instrument.name}
+                                </span>
+                              </div>
+                              <PresenceStatusChip presence={presence} />
                             </div>
-                            <PresenceStatusChip presence={presence} />
-                          </div>
-                        )
-                      })
+                          )
+                        })
                     : null}
                   <button
                     type="button"
@@ -234,7 +287,7 @@ export const PublicEventsPage = () => {
                   >
                     {expandedEventId === event.id
                       ? 'Masquer la liste'
-                      : `Afficher la liste (${event.assignments.length} musicien${event.assignments.length > 1 ? 's' : ''})`}
+                      : `Afficher la liste (${event.assignments.filter((assignment) => getPresenceForMusician(event, assignment.musicianId) !== undefined).length} musicien${event.assignments.filter((assignment) => getPresenceForMusician(event, assignment.musicianId) !== undefined).length > 1 ? 's' : ''} ayant répondu)`}
                   </button>
                 </div>
               ) : (
@@ -242,42 +295,100 @@ export const PublicEventsPage = () => {
               )}
 
               {hasResponses && chartData.length ? (
-                <div className="chart-card">
-                  <div className="chart-header">
-                    <span>Participation par instrument</span>
+                <div className="charts-container">
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <span>Participation par pupitre</span>
+                    </div>
+                    <div className="chart-area">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Tooltip
+                            formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
+                          />
+                          <Pie
+                            data={sectionData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={50}
+                            outerRadius={85}
+                            paddingAngle={2}
+                          >
+                            {sectionData.map((entry, index) => (
+                              <Cell key={`section-${entry.name}-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Legend
+                            verticalAlign="bottom"
+                            formatter={(value: string, entry: any) =>
+                              `${value} (${entry?.payload?.value ?? 0})`
+                            }
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                  <div className="chart-area">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Tooltip
-                          formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
-                        />
-                        <Pie
-                          data={chartData}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={50}
-                          outerRadius={85}
-                          paddingAngle={2}
-                        >
-                          {chartData.map((entry, index) => (
-                            <Cell key={`${entry.name}-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Legend
-                          verticalAlign="bottom"
-                          formatter={(value: string, entry: any) =>
-                            `${value} (${entry?.payload?.value ?? 0})`
-                          }
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+
+                  <div className="chart-card">
+                    <div className="chart-header">
+                      <span>Participation par instrument</span>
+                    </div>
+                    <div className="chart-area">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Tooltip
+                            formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
+                          />
+                          <Pie
+                            data={chartData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={50}
+                            outerRadius={85}
+                            paddingAngle={2}
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell key={`instrument-${entry.name}-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Legend
+                            verticalAlign="bottom"
+                            formatter={(value: string, entry: any) =>
+                              `${value} (${entry?.payload?.value ?? 0})`
+                            }
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 </div>
               ) : null}
               {!hasResponses ? (
                 <p className="chart-empty">Aucun musicien n'a encore répondu.</p>
               ) : null}
+
+              {event.presences.filter((p) => p.comment).length > 0 && (
+                <div className="comments-section">
+                  <h3 className="comments-title">Commentaires</h3>
+                  <div className="comments-list">
+                    {event.presences
+                      .filter((p) => p.comment)
+                      .map((presence) => (
+                        <div key={presence.id} className="comment-item">
+                          <div className="comment-header">
+                            <strong className="comment-author">
+                              {presence.musician.firstName} {presence.musician.lastName}
+                            </strong>
+                            <span className="comment-instrument">
+                              {presence.musician.instrument.name}
+                            </span>
+                          </div>
+                          <p className="comment-text">{presence.comment}</p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <footer className="card-footer">
                 <button type="button" className="primary-button" onClick={() => handleOpenModal(event)}>

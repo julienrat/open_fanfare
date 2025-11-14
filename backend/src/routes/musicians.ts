@@ -30,7 +30,11 @@ router.get("/", async (_req, res) => {
       { lastName: "asc" },
       { firstName: "asc" },
     ],
-    include: { instrument: true },
+    include: { 
+      instrument: {
+        include: { section: true }
+      }
+    },
   });
   res.json(musicians);
 });
@@ -44,7 +48,11 @@ router.post("/", adminAuth, async (req, res) => {
 
   const musician = await prisma.musician.create({
     data: parseResult.data,
-    include: { instrument: true },
+    include: { 
+      instrument: {
+        include: { section: true }
+      }
+    },
   });
 
   res.status(201).json(musician);
@@ -67,7 +75,11 @@ router.put("/:id", adminAuth, async (req, res) => {
     const musician = await prisma.musician.update({
       where: { id: musicianId },
       data: parseResult.data,
-      include: { instrument: true },
+      include: { 
+        instrument: {
+          include: { section: true }
+        }
+      },
     });
     res.json(musician);
   } catch (error) {

@@ -1,4 +1,4 @@
-import type { AttendanceStatus, Event, Instrument, Musician, Presence } from './types'
+import type { AttendanceStatus, Event, Instrument, Musician, Presence, Section } from './types'
 
 const API_BASE =
   import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? 'http://localhost:4000'
@@ -155,6 +155,29 @@ export const api = {
     }),
   deleteStatus: (id: number, adminSecret: string) =>
     apiFetch<void>(`/api/statuses/${id}`, {
+      method: 'DELETE',
+      adminSecret,
+    }),
+
+  listSections: () => apiFetch<Section[]>('/api/sections'),
+  createSection: (payload: Partial<Section>, adminSecret: string) =>
+    apiFetch<Section>('/api/sections', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      adminSecret,
+    }),
+  updateSection: (
+    id: number,
+    payload: Partial<Section>,
+    adminSecret: string
+  ) =>
+    apiFetch<Section>(`/api/sections/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      adminSecret,
+    }),
+  deleteSection: (id: number, adminSecret: string) =>
+    apiFetch<void>(`/api/sections/${id}`, {
       method: 'DELETE',
       adminSecret,
     }),
