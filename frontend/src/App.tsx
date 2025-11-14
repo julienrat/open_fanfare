@@ -3,11 +3,13 @@ import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { PublicEventsPage } from './pages/PublicEvents'
 import { AgendaPage } from './pages/Agenda'
+import { StatisticsPage } from './pages/Statistics'
 import { AdminDashboardWrapper } from './components/AdminDashboardWrapper'
 
 const navItems = [
   { to: '/', label: 'Présences' },
   { to: '/agenda', label: 'Agenda' },
+  { to: '/stats', label: 'Statistiques' },
   { to: '/admin', label: 'Administration' },
 ]
 
@@ -17,6 +19,9 @@ const Navigation = () => {
   const activePath = useMemo(() => {
     if (location.pathname.startsWith('/admin')) {
       return '/admin'
+    }
+    if (location.pathname.startsWith('/stats')) {
+      return '/stats'
     }
     if (location.pathname.startsWith('/agenda')) {
       return '/agenda'
@@ -55,6 +60,7 @@ function App() {
         <Routes>
           <Route path="/" element={<PublicEventsPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
+          <Route path="/stats" element={<StatisticsPage />} />
           <Route path="/admin" element={<AdminDashboardWrapper />} />
         </Routes>
       </main>
