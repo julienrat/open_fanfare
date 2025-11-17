@@ -3,17 +3,38 @@ import type { AttendanceStatus, Event, Instrument, Musician, Presence, Section }
 const API_BASE =
   import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? 'http://localhost:4000'
 
+let appPassword: string | null = null
+
+export const setAppPassword = (password: string) => {
+  appPassword = password
+  localStorage.setItem('app-password', password)
+}
+
+export const getAppPassword = () => {
+  if (!appPassword) {
+    appPassword = localStorage.getItem('app-password')
+  }
+  return appPassword
+}
+
+export const clearAppPassword = () => {
+  appPassword = null
+  localStorage.removeItem('app-password')
+}
+
 export const apiFetch = async <T>(
   path: string,
   init?: RequestInit & { adminSecret?: string }
 ): Promise<T> => {
   const { adminSecret, headers, ...rest } = init ?? {}
+  const password = getAppPassword()
   const response = await fetch(`${API_BASE}${path}`, {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
       ...(headers ?? {}),
       ...(adminSecret ? { 'x-admin-secret': adminSecret } : {}),
+      ...(password ? { 'x-app-password': password } : {}),
     },
   })
 

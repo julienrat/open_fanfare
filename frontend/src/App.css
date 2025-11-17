@@ -91,6 +91,27 @@
   color: #0f172a;
 }
 
+.logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  font-weight: 500;
+  color: rgba(248, 250, 252, 0.8);
+  background: transparent;
+  border: 1px solid rgba(248, 250, 252, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+}
+
+.logout-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+}
+
 .app-header .app-container {
   display: flex;
   justify-content: space-between;
@@ -1470,6 +1491,16 @@ tbody tr:nth-child(even) {
     border-radius: 0;
     justify-content: flex-start;
     border-bottom: 1px solid rgba(248, 250, 252, 0.1);
+  }
+
+  .logout-button {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    border-radius: 0;
+    justify-content: flex-start;
+    margin-left: 0;
+    border: none;
+    border-top: 1px solid rgba(248, 250, 252, 0.1);
   }
 
   .nav-link:last-child {

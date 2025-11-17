@@ -488,7 +488,6 @@ export const PublicEventsPage = () => {
                     {assignment.musician.instrument.name})
                   </option>
                 ))}
-                <option value="__manual__">Je ne suis pas dans la liste</option>
               </select>
             </label>
 

@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { appConfig } from "./config";
+import { requireAppPassword } from "./middleware/appAuth";
 import instrumentsRouter from "./routes/instruments";
 import musiciansRouter from "./routes/musicians";
 import eventsRouter from "./routes/events";
@@ -37,11 +38,12 @@ export const createApp = () => {
     res.json({ status: "ok" });
   });
 
-  app.use("/api/instruments", instrumentsRouter);
-  app.use("/api/musicians", musiciansRouter);
-  app.use("/api/events", eventsRouter);
-  app.use("/api/statuses", statusesRouter);
-  app.use("/api/sections", sectionsRouter);
+  // Routes protégées par mot de passe
+  app.use("/api/instruments", requireAppPassword, instrumentsRouter);
+  app.use("/api/musicians", requireAppPassword, musiciansRouter);
+  app.use("/api/events", requireAppPassword, eventsRouter);
+  app.use("/api/statuses", requireAppPassword, statusesRouter);
+  app.use("/api/sections", requireAppPassword, sectionsRouter);
 
   return app;
 };

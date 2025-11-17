@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { PublicEventsPage } from './pages/PublicEvents'
 import { AgendaPage } from './pages/Agenda'
 import { StatisticsPage } from './pages/Statistics'
 import { AdminDashboardWrapper } from './components/AdminDashboardWrapper'
+import { AppLogin } from './components/AppLogin'
+import { getAppPassword, setAppPassword, clearAppPassword } from './api/client'
 
 const navItems = [
   { to: '/', label: 'Présences' },
@@ -13,7 +15,11 @@ const navItems = [
   { to: '/admin', label: 'Administration' },
 ]
 
-const Navigation = () => {
+interface NavigationProps {
+  onLogout: () => void
+}
+
+const Navigation = ({ onLogout }: NavigationProps) => {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -61,6 +67,9 @@ const Navigation = () => {
               {item.label}
             </NavLink>
           ))}
+          <button onClick={onLogout} className="logout-button">
+            Déconnexion
+          </button>
         </nav>
       </div>
     </header>
@@ -68,9 +77,63 @@ const Navigation = () => {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    // Vérifier si un mot de passe est déjà enregistré
+    const savedPassword = getAppPassword()
+    if (savedPassword) {
+      setIsAuthenticated(true)
+    }
+    setIsCheckingAuth(false)
+  }, [])
+
+  const handleLogin = async (password: string) => {
+    setAppPassword(password)
+    // Tester l'authentification avec une requête simple
+    try {
+      const response = await fetch('http://localhost:4000/api/statuses', {
+        headers: {
+          'x-app-password': password,
+        },
+      })
+      if (response.ok) {
+        setIsAuthenticated(true)
+      } else {
+        clearAppPassword()
+        alert('Mot de passe incorrect')
+      }
+    } catch (error) {
+      clearAppPassword()
+      alert('Erreur de connexion')
+    }
+  }
+
+  if (isCheckingAuth) {
+    return (
+      <div className="app">
+        <div style={{ padding: '2rem', textAlign: 'center' }}>Chargement...</div>
+      </div>
+    )
+  }
+
+  const handleLogout = () => {
+    clearAppPassword()
+    setIsAuthenticated(false)
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app">
+        <AppLogin onLogin={handleLogin} />
+      </div>
+    )
+  }
+
   return (
     <div className="app">
-      <Navigation />
+      <Navigation onLogout={handleLogout} />
       <main className="app-main app-container">
         <Routes>
           <Route path="/" element={<PublicEventsPage />} />
