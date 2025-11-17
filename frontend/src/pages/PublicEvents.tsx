@@ -51,6 +51,7 @@ export const PublicEventsPage = () => {
   const [formState, setFormState] = useState<PresenceFormState>(defaultFormState)
   const [selectValue, setSelectValue] = useState<string>('')
   const [expandedEventId, setExpandedEventId] = useState<number | null>(null)
+  const [showStatsForEvent, setShowStatsForEvent] = useState<number | null>(null)
 
   const defaultStatus = useMemo(
     () => statuses?.find((status) => status.isDefault),
@@ -157,10 +158,30 @@ export const PublicEventsPage = () => {
     }))
   }
 
-  const handleOpenModal = (event: Event) => {
+  const handleOpenModal = (event: Event, musician?: Musician, presence?: Presence) => {
     setSelectedEvent(event)
-    setFormState(defaultFormState)
-    setSelectValue('')
+    if (musician && presence) {
+      setFormState({
+        musicianId: musician.id,
+        firstName: musician.firstName,
+        lastName: musician.lastName,
+        statusId: presence.statusId,
+        comment: presence.comment ?? '',
+      })
+      setSelectValue(musician.id.toString())
+    } else if (musician) {
+      setFormState({
+        musicianId: musician.id,
+        firstName: musician.firstName,
+        lastName: musician.lastName,
+        statusId: undefined,
+        comment: '',
+      })
+      setSelectValue(musician.id.toString())
+    } else {
+      setFormState(defaultFormState)
+      setSelectValue('')
+    }
   }
 
   const handleCloseModal = () => {
@@ -240,44 +261,36 @@ export const PublicEventsPage = () => {
           return (
             <article key={event.id} className="card">
               <header className="card-header">
-                <div>
-                  <h2>{event.title}</h2>
-                  <p className="card-date">{formatEventDate(event.date)}</p>
-                  <div className="card-meta">
-                    {event.organizer ? <span>Organisateur : {event.organizer}</span> : null}
-                    {event.price ? <span>Tarif : {event.price}</span> : null}
+                <div className="card-header-content">
+                  <div>
+                    <h2>{event.title}</h2>
+                    <p className="card-date">{formatEventDate(event.date)}</p>
+                    {event.location ? <p className="card-location">📍 {event.location}</p> : null}
+                    <div className="card-meta">
+                      {event.organizer ? <span>👤 {event.organizer}</span> : null}
+                      {event.price ? <span>💰 {event.price}</span> : null}
+                    </div>
+                    <div className="card-stats">
+                      <span className="stat-badge">
+                        <strong>{filteredResponsesCount}</strong> / {event.assignments.length} présent{filteredResponsesCount > 1 ? 's' : ''}
+                      </span>
+                      {event.assignments.length > 0 && (
+                        <span className="stat-badge participation-rate">
+                          {Math.round((filteredResponsesCount / event.assignments.length) * 100)}% de participation
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button type="button" className="primary-button" onClick={() => handleOpenModal(event)}>
+                    Je participe
+                  </button>
                 </div>
-                {event.location ? <span className="card-location">{event.location}</span> : null}
               </header>
 
               {event.description ? <p className="card-description">{event.description}</p> : null}
 
               {event.assignments.length ? (
                 <div className="attendance-list">
-                  {expandedEventId === event.id
-                    ? event.assignments
-                        .filter((assignment) => {
-                          const presence = getPresenceForMusician(event, assignment.musicianId)
-                          return presence !== undefined
-                        })
-                        .map((assignment) => {
-                          const presence = getPresenceForMusician(event, assignment.musicianId)
-                          return (
-                            <div key={assignment.id} className="attendance-item">
-                              <div className="attendance-info">
-                                <span className="attendance-name">
-                                  {assignment.musician.firstName} {assignment.musician.lastName}
-                                </span>
-                                <span className="attendance-instrument">
-                                  {assignment.musician.instrument.name}
-                                </span>
-                              </div>
-                              <PresenceStatusChip presence={presence} />
-                            </div>
-                          )
-                        })
-                    : null}
                   <button
                     type="button"
                     className="ghost-button small"
@@ -289,79 +302,121 @@ export const PublicEventsPage = () => {
                       ? 'Masquer la liste'
                       : `Afficher la liste (${event.assignments.filter((assignment) => getPresenceForMusician(event, assignment.musicianId) !== undefined).length} musicien${event.assignments.filter((assignment) => getPresenceForMusician(event, assignment.musicianId) !== undefined).length > 1 ? 's' : ''} ayant répondu)`}
                   </button>
+                  {expandedEventId === event.id && (
+                    <div className="attendance-items">
+                      {event.assignments
+                        .filter((assignment) => {
+                          const presence = getPresenceForMusician(event, assignment.musicianId)
+                          return presence !== undefined
+                        })
+                        .map((assignment) => {
+                          const presence = getPresenceForMusician(event, assignment.musicianId)
+                          return (
+                            <div
+                              key={assignment.id}
+                              className="attendance-item clickable"
+                              onClick={() => handleOpenModal(event, assignment.musician, presence)}
+                            >
+                              <div className="attendance-info">
+                                <span className="attendance-name">
+                                  {assignment.musician.firstName} {assignment.musician.lastName}
+                                </span>
+                                <span className="attendance-instrument">
+                                  {assignment.musician.instrument.name}
+                                </span>
+                              </div>
+                              <PresenceStatusChip presence={presence} />
+                            </div>
+                          )
+                        })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="chart-empty">Aucun musicien assigné pour le moment.</p>
               )}
 
               {hasResponses && chartData.length ? (
-                <div className="charts-container">
-                  <div className="chart-card">
-                    <div className="chart-header">
-                      <span>Participation par pupitre</span>
-                    </div>
-                    <div className="chart-area">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Tooltip
-                            formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
-                          />
-                          <Pie
-                            data={sectionData}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={50}
-                            outerRadius={85}
-                            paddingAngle={2}
-                          >
-                            {sectionData.map((entry, index) => (
-                              <Cell key={`section-${entry.name}-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Legend
-                            verticalAlign="bottom"
-                            formatter={(value: string, entry: any) =>
-                              `${value} (${entry?.payload?.value ?? 0})`
-                            }
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
+                <>
+                  <button
+                    type="button"
+                    className="ghost-button small"
+                    onClick={() =>
+                      setShowStatsForEvent((current) => (current === event.id ? null : event.id))
+                    }
+                  >
+                    {showStatsForEvent === event.id ? 'Masquer les stats' : 'Afficher les stats'}
+                  </button>
+                  {showStatsForEvent === event.id && (
+                    <div className="charts-container">
+                      <div className="chart-card">
+                        <div className="chart-header">
+                          <span>Participation par pupitre</span>
+                        </div>
+                        <div className="chart-area">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Tooltip
+                                formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
+                              />
+                              <Pie
+                                data={sectionData}
+                                dataKey="value"
+                                nameKey="name"
+                                innerRadius={50}
+                                outerRadius={85}
+                                paddingAngle={2}
+                              >
+                                {sectionData.map((entry, index) => (
+                                  <Cell key={`section-${entry.name}-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Legend
+                                verticalAlign="bottom"
+                                formatter={(value: string, entry: any) =>
+                                  `${value} (${entry?.payload?.value ?? 0})`
+                                }
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
 
-                  <div className="chart-card">
-                    <div className="chart-header">
-                      <span>Participation par instrument</span>
+                      <div className="chart-card">
+                        <div className="chart-header">
+                          <span>Participation par instrument</span>
+                        </div>
+                        <div className="chart-area">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Tooltip
+                                formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
+                              />
+                              <Pie
+                                data={chartData}
+                                dataKey="value"
+                                nameKey="name"
+                                innerRadius={50}
+                                outerRadius={85}
+                                paddingAngle={2}
+                              >
+                                {chartData.map((entry, index) => (
+                                  <Cell key={`instrument-${entry.name}-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Legend
+                                verticalAlign="bottom"
+                                formatter={(value: string, entry: any) =>
+                                  `${value} (${entry?.payload?.value ?? 0})`
+                                }
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
                     </div>
-                    <div className="chart-area">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Tooltip
-                            formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
-                          />
-                          <Pie
-                            data={chartData}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={50}
-                            outerRadius={85}
-                            paddingAngle={2}
-                          >
-                            {chartData.map((entry, index) => (
-                              <Cell key={`instrument-${entry.name}-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Legend
-                            verticalAlign="bottom"
-                            formatter={(value: string, entry: any) =>
-                              `${value} (${entry?.payload?.value ?? 0})`
-                            }
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
+                  )}
+                </>
               ) : null}
               {!hasResponses ? (
                 <p className="chart-empty">Aucun musicien n'a encore répondu.</p>
@@ -390,11 +445,7 @@ export const PublicEventsPage = () => {
                 </div>
               )}
 
-              <footer className="card-footer">
-                <button type="button" className="primary-button" onClick={() => handleOpenModal(event)}>
-                  Je réponds
-                </button>
-              </footer>
+
             </article>
           )
         })}

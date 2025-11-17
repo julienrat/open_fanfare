@@ -42,11 +42,30 @@ export const generateICalFile = (events: Event[]): string => {
     const startDate = new Date(event.date)
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // +2h par défaut
 
+    // Filtrer les musiciens ayant répondu positivement
+    const presentMusicians = event.presences
+      .filter((presence) => presence.status.label.toLowerCase().includes('présent'))
+      .map((presence) => ({
+        name: `${presence.musician.firstName} ${presence.musician.lastName}`,
+        instrument: presence.musician.instrument.name,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+
     // Construire la description
     let description = ''
     if (event.description) {
       description += escapeICalText(event.description) + '\\n\\n'
     }
+    
+    if (event.setlist) {
+      description += 'SETLIST:\\n'
+      const songs = event.setlist.split('\n').filter(s => s.trim())
+      songs.forEach((song, index) => {
+        description += `${index + 1}. ${escapeICalText(song.trim())}\\n`
+      })
+      description += '\\n'
+    }
+    
     if (event.organizer) {
       description += `Organisateur: ${escapeICalText(event.organizer)}\\n`
     }
@@ -54,25 +73,30 @@ export const generateICalFile = (events: Event[]): string => {
       description += `Tarif: ${escapeICalText(event.price)}\\n`
     }
     description += `\\nMusiciens attendus: ${event.assignments.length}`
+    
+    if (presentMusicians.length > 0) {
+      description += `\\nMusiciens présents (${presentMusicians.length}):\\n`
+      presentMusicians.forEach((musician) => {
+        description += `  - ${escapeICalText(musician.name)} (${escapeICalText(musician.instrument)})\\n`
+      })
+    }
 
-    const eventLines = [
-      '',
-      'BEGIN:VEVENT',
-      `UID:${event.id}@openfanfare.local`,
-      `DTSTAMP:${timestamp}`,
-      `DTSTART:${formatICalDate(startDate)}`,
-      `DTEND:${formatICalDate(endDate)}`,
-      `SUMMARY:${escapeICalText(event.title)}`,
-      description ? `DESCRIPTION:${description}` : '',
-      event.location ? `LOCATION:${escapeICalText(event.location)}` : '',
-      'STATUS:CONFIRMED',
-      'SEQUENCE:0',
-      'END:VEVENT',
-    ]
-      .filter(Boolean)
-      .join('\r\n')
-
-    ical += eventLines
+    ical += '\r\n'
+    ical += 'BEGIN:VEVENT\r\n'
+    ical += `UID:${event.id}@openfanfare.local\r\n`
+    ical += `DTSTAMP:${timestamp}\r\n`
+    ical += `DTSTART:${formatICalDate(startDate)}\r\n`
+    ical += `DTEND:${formatICalDate(endDate)}\r\n`
+    ical += `SUMMARY:${escapeICalText(event.title)}\r\n`
+    if (description) {
+      ical += `DESCRIPTION:${description}\r\n`
+    }
+    if (event.location) {
+      ical += `LOCATION:${escapeICalText(event.location)}\r\n`
+    }
+    ical += 'STATUS:CONFIRMED\r\n'
+    ical += 'SEQUENCE:0\r\n'
+    ical += 'END:VEVENT'
   })
 
   ical += '\r\nEND:VCALENDAR'

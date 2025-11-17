@@ -66,6 +66,7 @@ export type Event = {
   location?: string | null;
   price?: string | null;
   organizer?: string | null;
+  setlist?: string | null;
   assignments: EventMusician[];
   presences: Presence[];
   createdAt: string;

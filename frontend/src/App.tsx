@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { PublicEventsPage } from './pages/PublicEvents'
@@ -15,6 +15,7 @@ const navItems = [
 
 const Navigation = () => {
   const location = useLocation()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const activePath = useMemo(() => {
     if (location.pathname.startsWith('/admin')) {
@@ -29,6 +30,10 @@ const Navigation = () => {
     return '/'
   }, [location.pathname])
 
+  const handleNavClick = () => {
+    setIsMenuOpen(false)
+  }
+
   return (
     <header className="app-header">
       <div className="app-container">
@@ -36,12 +41,22 @@ const Navigation = () => {
           <span className="brand-title">Open Fanfare</span>
           <span className="brand-subtitle">Gestion des présences</span>
         </div>
-        <nav className="nav-links">
+        <button 
+          className="menu-toggle"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <nav className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={activePath === item.to ? 'nav-link active' : 'nav-link'}
+              onClick={handleNavClick}
             >
               {item.label}
             </NavLink>

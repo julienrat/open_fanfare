@@ -282,6 +282,17 @@ export const AgendaPage = () => {
                         {stat.event.price && <span>💰 {stat.event.price}</span>}
                       </div>
 
+                      {stat.event.setlist && (
+                        <div className="setlist-section">
+                          <h4>🎵 Setlist</h4>
+                          <ol className="setlist-items">
+                            {stat.event.setlist.split('\n').filter(s => s.trim()).map((song, index) => (
+                              <li key={index}>{song.trim()}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+
                       <div className="event-stats-row">
                         <div className="stat-box">
                           <span className="stat-label">Assignés</span>
@@ -313,9 +324,10 @@ export const AgendaPage = () => {
                                   data={stat.instrumentsStats}
                                   dataKey="count"
                                   nameKey="name"
-                                  innerRadius={45}
-                                  outerRadius={75}
+                                  innerRadius={40}
+                                  outerRadius={65}
                                   paddingAngle={2}
+                                  cy="40%"
                                 >
                                   {stat.instrumentsStats.map((entry, index) => (
                                     <Cell
@@ -326,6 +338,8 @@ export const AgendaPage = () => {
                                 </Pie>
                                 <Legend
                                   verticalAlign="bottom"
+                                  align="center"
+                                  wrapperStyle={{ paddingTop: '10px' }}
                                   formatter={(value: string, entry: any) =>
                                     `${value} (${entry?.payload?.count ?? 0})`
                                   }

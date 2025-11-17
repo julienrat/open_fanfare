@@ -15,6 +15,7 @@ const eventBaseSchema = z.object({
   location: z.string().optional().nullable(),
   price: z.string().optional().nullable(),
   organizer: z.string().optional().nullable(),
+  setlist: z.string().optional().nullable(),
 });
 
 router.get("/", async (_req, res) => {

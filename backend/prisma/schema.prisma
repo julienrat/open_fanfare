@@ -57,6 +57,7 @@ model Event {
   location        String?
   price           String?
   organizer       String?
+  setlist         String?
   presences       Presence[]
   assignments     EventMusician[]
   createdAt       DateTime        @default(now())
