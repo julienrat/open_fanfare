@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { useEvents, useSections } from '../api/queries'
+import { useEvents, useInstruments } from '../api/queries'
 
 export const StatisticsPage = () => {
   const { data: events, isLoading: eventsLoading } = useEvents()
-  const { data: sections, isLoading: sectionsLoading } = useSections()
+  const { data: instruments, isLoading: instrumentsLoading } = useInstruments()
 
   const sortedEvents = useMemo(
     () =>
@@ -15,18 +15,32 @@ export const StatisticsPage = () => {
     [events]
   )
 
+  const sortedInstruments = useMemo(
+    () =>
+      (instruments ?? [])
+        .slice()
+        .sort((a, b) => {
+          // Trier par section d'abord, puis par nom d'instrument
+          const sectionA = a.section?.name ?? 'ZZZ'
+          const sectionB = b.section?.name ?? 'ZZZ'
+          if (sectionA !== sectionB) {
+            return sectionA.localeCompare(sectionB)
+          }
+          return a.name.localeCompare(b.name)
+        }),
+    [instruments]
+  )
+
   const statsData = useMemo(() => {
-    if (!events || !sections) return null
+    if (!events || !instruments) return null
 
-    // Créer une map pour compter les présents par section et par événement
-    const stats = new Map<number | string, Map<number, number>>()
+    // Créer une map pour compter les présents par instrument et par événement
+    const stats = new Map<number, Map<number, number>>()
 
-    // Initialiser avec toutes les sections
-    sections.forEach((section) => {
-      stats.set(section.id, new Map())
+    // Initialiser avec tous les instruments
+    instruments.forEach((instrument) => {
+      stats.set(instrument.id, new Map())
     })
-    // Ajouter une ligne pour "Sans pupitre"
-    stats.set('none', new Map())
 
     // Compter les présents pour chaque événement
     sortedEvents.forEach((event) => {
@@ -41,21 +55,20 @@ export const StatisticsPage = () => {
         : event.presences
 
       presentPresences.forEach((presence) => {
-        const section = presence.musician.instrument.section
-        const sectionKey = section ? section.id : 'none'
+        const instrumentId = presence.musician.instrument.id
         
-        if (!stats.has(sectionKey)) {
-          stats.set(sectionKey, new Map())
+        if (!stats.has(instrumentId)) {
+          stats.set(instrumentId, new Map())
         }
         
-        const sectionStats = stats.get(sectionKey)!
-        const currentCount = sectionStats.get(event.id) || 0
-        sectionStats.set(event.id, currentCount + 1)
+        const instrumentStats = stats.get(instrumentId)!
+        const currentCount = instrumentStats.get(event.id) || 0
+        instrumentStats.set(event.id, currentCount + 1)
       })
     })
 
     return stats
-  }, [events, sections, sortedEvents])
+  }, [events, instruments, sortedEvents])
 
   const columnTotals = useMemo(() => {
     if (!statsData || !sortedEvents) return new Map<number, number>()
@@ -64,8 +77,8 @@ export const StatisticsPage = () => {
     
     sortedEvents.forEach((event) => {
       let total = 0
-      statsData.forEach((sectionStats) => {
-        total += sectionStats.get(event.id) || 0
+      statsData.forEach((instrumentStats) => {
+        total += instrumentStats.get(event.id) || 0
       })
       totals.set(event.id, total)
     })
@@ -73,7 +86,7 @@ export const StatisticsPage = () => {
     return totals
   }, [statsData, sortedEvents])
 
-  if (eventsLoading || sectionsLoading) {
+  if (eventsLoading || instrumentsLoading) {
     return (
       <div className="page">
         <p>Chargement des statistiques…</p>
@@ -92,16 +105,16 @@ export const StatisticsPage = () => {
 
   return (
     <div className="page">
-      <h1 className="page-title">Statistiques par pupitre</h1>
+      <h1 className="page-title">Statistiques par instrument</h1>
       <p className="page-subtitle">
-        Nombre de musiciens présents par pupitre et par concert
+        Nombre de musiciens présents par instrument et par concert
       </p>
 
       <div className="stats-table-wrapper">
         <table className="stats-table">
           <thead>
             <tr>
-              <th className="sticky-col">Pupitre</th>
+              <th className="sticky-col">Instrument</th>
               {sortedEvents.map((event) => (
                 <th key={event.id}>
                   <div className="stats-header">
@@ -112,71 +125,46 @@ export const StatisticsPage = () => {
                   </div>
                 </th>
               ))}
-              <th className="total-col">Total</th>
             </tr>
           </thead>
           <tbody>
-            {sections?.map((section) => {
-              const sectionStats = statsData?.get(section.id)
+            {sortedInstruments.map((instrument) => {
+              const instrumentStats = statsData?.get(instrument.id)
               const rowTotal = sortedEvents.reduce(
-                (sum, event) => sum + (sectionStats?.get(event.id) || 0),
+                (sum, event) => sum + (instrumentStats?.get(event.id) || 0),
                 0
               )
 
+              // Ne pas afficher les instruments qui n'ont jamais eu de présents
+              if (rowTotal === 0) return null
+
               return (
-                <tr key={section.id}>
-                  <td className="sticky-col section-name">
-                    <span
-                      className="color-dot"
-                      style={{ backgroundColor: section.color ?? '#94a3b8' }}
-                    />
-                    {section.name}
+                <tr key={instrument.id}>
+                  <td className="sticky-col">
+                    <div className="instrument-name">
+                      <span
+                        className="color-dot"
+                        style={{ backgroundColor: instrument.section?.color ?? '#94a3b8' }}
+                      />
+                      <span className="instrument-text">
+                        {instrument.name}
+                        {instrument.section && (
+                          <span className="section-label"> ({instrument.section.name})</span>
+                        )}
+                      </span>
+                    </div>
                   </td>
                   {sortedEvents.map((event) => {
-                    const count = sectionStats?.get(event.id) || 0
+                    const count = instrumentStats?.get(event.id) || 0
                     return (
                       <td key={event.id} className="stats-cell">
                         {count > 0 ? count : '-'}
                       </td>
                     )
                   })}
-                  <td className="total-col">{rowTotal}</td>
                 </tr>
               )
             })}
-            {/* Ligne "Sans pupitre" */}
-            {(() => {
-              const noneStats = statsData?.get('none')
-              const hasData = sortedEvents.some((event) => (noneStats?.get(event.id) || 0) > 0)
-              
-              if (!hasData) return null
-
-              const rowTotal = sortedEvents.reduce(
-                (sum, event) => sum + (noneStats?.get(event.id) || 0),
-                0
-              )
-
-              return (
-                <tr>
-                  <td className="sticky-col section-name">
-                    <span
-                      className="color-dot"
-                      style={{ backgroundColor: '#94a3b8' }}
-                    />
-                    Sans pupitre
-                  </td>
-                  {sortedEvents.map((event) => {
-                    const count = noneStats?.get(event.id) || 0
-                    return (
-                      <td key={event.id} className="stats-cell">
-                        {count > 0 ? count : '-'}
-                      </td>
-                    )
-                  })}
-                  <td className="total-col">{rowTotal}</td>
-                </tr>
-              )
-            })()}
           </tbody>
           <tfoot>
             <tr>
@@ -186,9 +174,6 @@ export const StatisticsPage = () => {
                   {columnTotals.get(event.id) || 0}
                 </td>
               ))}
-              <td className="total-col total-row">
-                {Array.from(columnTotals.values()).reduce((sum, val) => sum + val, 0)}
-              </td>
             </tr>
           </tfoot>
         </table>
