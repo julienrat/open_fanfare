@@ -52,6 +52,7 @@ export const PublicEventsPage = () => {
   const [selectValue, setSelectValue] = useState<string>('')
   const [expandedEventId, setExpandedEventId] = useState<number | null>(null)
   const [showStatsForEvent, setShowStatsForEvent] = useState<number | null>(null)
+  const [showMissingForEvent, setShowMissingForEvent] = useState<number | null>(null)
 
   const defaultStatus = useMemo(
     () => statuses?.find((status) => status.isDefault),
@@ -65,53 +66,6 @@ export const PublicEventsPage = () => {
   )
 
   const fallbackColors = ['#22c55e', '#0ea5e9', '#f97316', '#a855f7', '#ef4444', '#facc15']
-
-  const computeSectionData = (event: Event) => {
-    const counts = new Map<
-      number | string,
-      { name: string; color?: string | null; value: number }
-    >()
-
-    const appendCount = (sectionId: number | string, name: string, color?: string | null) => {
-      const existing = counts.get(sectionId)
-      if (existing) {
-        existing.value += 1
-      } else {
-        counts.set(sectionId, { name, color, value: 1 })
-      }
-    }
-
-    const defaultStatusId = defaultStatus?.id
-    const presentPresences =
-      defaultStatusId != null
-        ? event.presences.filter((presence) => presence.statusId === defaultStatusId)
-        : event.presences
-
-    if (presentPresences.length > 0) {
-      presentPresences.forEach((presence) => {
-        const section = presence.musician.instrument.section
-        if (section) {
-          appendCount(section.id, section.name, section.color)
-        } else {
-          appendCount('none', 'Sans pupitre', '#94a3b8')
-        }
-      })
-    } else {
-      event.assignments.forEach((assignment) => {
-        const section = assignment.musician.instrument.section
-        if (section) {
-          appendCount(section.id, section.name, section.color)
-        } else {
-          appendCount('none', 'Sans pupitre', '#94a3b8')
-        }
-      })
-    }
-
-    return Array.from(counts.values()).map((entry, index) => ({
-      ...entry,
-      color: entry.color ?? fallbackColors[index % fallbackColors.length],
-    }))
-  }
 
   const computeParticipationData = (event: Event) => {
     const counts = new Map<
@@ -190,6 +144,43 @@ export const PublicEventsPage = () => {
     setSelectValue('')
   }
 
+  const computeMissingInstruments = (event: Event) => {
+    const defaultStatusId = defaultStatus?.id
+    const presentMusicians = defaultStatusId != null
+      ? event.presences
+          .filter((presence) => presence.statusId === defaultStatusId)
+          .map((presence) => presence.musicianId)
+      : event.presences.map((presence) => presence.musicianId)
+
+    const missingAssignments = event.assignments.filter(
+      (assignment) => !presentMusicians.includes(assignment.musicianId)
+    )
+
+    const counts = new Map<
+      number,
+      { name: string; color?: string | null; value: number }
+    >()
+
+    missingAssignments.forEach((assignment) => {
+      const instrumentId = assignment.musician.instrumentId
+      const existing = counts.get(instrumentId)
+      if (existing) {
+        existing.value += 1
+      } else {
+        counts.set(instrumentId, {
+          name: assignment.musician.instrument.name,
+          color: assignment.musician.instrument.color,
+          value: 1,
+        })
+      }
+    })
+
+    return Array.from(counts.values()).map((entry, index) => ({
+      ...entry,
+      color: entry.color ?? fallbackColors[index % fallbackColors.length],
+    }))
+  }
+
   const handleSelectMusician = (musician?: Musician) => {
     if (!musician) {
       setFormState((prev) => ({
@@ -251,7 +242,6 @@ export const PublicEventsPage = () => {
       <div className="cards-grid">
         {sortedEvents.map((event) => {
           const chartData = computeParticipationData(event)
-          const sectionData = computeSectionData(event)
           const filteredResponsesCount =
             defaultStatus?.id != null
               ? event.presences.filter((presence) => presence.statusId === defaultStatus.id).length
@@ -338,82 +328,133 @@ export const PublicEventsPage = () => {
 
               {hasResponses && chartData.length ? (
                 <>
-                  <button
-                    type="button"
-                    className="ghost-button small"
-                    onClick={() =>
-                      setShowStatsForEvent((current) => (current === event.id ? null : event.id))
-                    }
-                  >
-                    {showStatsForEvent === event.id ? 'Masquer les stats' : 'Afficher les stats'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="ghost-button small"
+                      onClick={() =>
+                        setShowStatsForEvent((current) => (current === event.id ? null : event.id))
+                      }
+                    >
+                      {showStatsForEvent === event.id ? 'Masquer les stats' : 'Afficher les stats'}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button small"
+                      onClick={() =>
+                        setShowMissingForEvent((current) => (current === event.id ? null : event.id))
+                      }
+                    >
+                      {showMissingForEvent === event.id ? 'Masquer les manquants' : 'Afficher les instruments manquants'}
+                    </button>
+                  </div>
                   {showStatsForEvent === event.id && (
                     <div className="charts-container">
-                      <div className="chart-card">
-                        <div className="chart-header">
-                          <span>Participation par pupitre</span>
+                      {computeMissingInstruments(event).length > 0 && (
+                        <div className="chart-card">
+                          <div className="chart-header">
+                            <span>Instruments manquants</span>
+                          </div>
+                          <div className="chart-area">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Tooltip
+                                  formatter={(value: number, name) => [`${value} musicien(s) manquant(s)`, name as string]}
+                                />
+                                <Pie
+                                  data={computeMissingInstruments(event)}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={50}
+                                  outerRadius={85}
+                                  paddingAngle={2}
+                                >
+                                  {computeMissingInstruments(event).map((entry, index) => (
+                                    <Cell key={`missing-${entry.name}-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Legend
+                                  verticalAlign="bottom"
+                                  formatter={(value: string, entry: any) =>
+                                    `${value} (${entry?.payload?.value ?? 0})`
+                                  }
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="chart-area">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Tooltip
-                                formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
-                              />
-                              <Pie
-                                data={sectionData}
-                                dataKey="value"
-                                nameKey="name"
-                                innerRadius={50}
-                                outerRadius={85}
-                                paddingAngle={2}
-                              >
-                                {sectionData.map((entry, index) => (
-                                  <Cell key={`section-${entry.name}-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Legend
-                                verticalAlign="bottom"
-                                formatter={(value: string, entry: any) =>
-                                  `${value} (${entry?.payload?.value ?? 0})`
-                                }
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
+                      )}
 
-                      <div className="chart-card">
-                        <div className="chart-header">
-                          <span>Participation par instrument</span>
+                      {chartData.length > 0 && (
+                        <div className="chart-card">
+                          <div className="chart-header">
+                            <span>Participation par instrument</span>
+                          </div>
+                          <div className="chart-area">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Tooltip
+                                  formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
+                                />
+                                <Pie
+                                  data={chartData}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={50}
+                                  outerRadius={85}
+                                  paddingAngle={2}
+                                >
+                                  {chartData.map((entry, index) => (
+                                    <Cell key={`instrument-${entry.name}-${index}`} fill={entry.color} />
+                                  ))}
+                                </Pie>
+                                <Legend
+                                  verticalAlign="bottom"
+                                  formatter={(value: string, entry: any) =>
+                                    `${value} (${entry?.payload?.value ?? 0})`
+                                  }
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="chart-area">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Tooltip
-                                formatter={(value: number, name) => [`${value} musicien(s)`, name as string]}
-                              />
-                              <Pie
-                                data={chartData}
-                                dataKey="value"
-                                nameKey="name"
-                                innerRadius={50}
-                                outerRadius={85}
-                                paddingAngle={2}
-                              >
-                                {chartData.map((entry, index) => (
-                                  <Cell key={`instrument-${entry.name}-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Legend
-                                verticalAlign="bottom"
-                                formatter={(value: string, entry: any) =>
-                                  `${value} (${entry?.payload?.value ?? 0})`
-                                }
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
+                      )}
+                    </div>
+                  )}
+                  {showMissingForEvent === event.id && (
+                    <div className="missing-instruments-section">
+                      <h3 style={{ marginTop: '1rem', fontSize: '1rem', fontWeight: 600 }}>Liste des instruments manquants</h3>
+                      {computeMissingInstruments(event).length > 0 ? (
+                        <div className="attendance-items" style={{ marginTop: '0.75rem' }}>
+                          {event.assignments
+                            .filter((assignment) => {
+                              const defaultStatusId = defaultStatus?.id
+                              const presentMusicians = defaultStatusId != null
+                                ? event.presences
+                                    .filter((presence) => presence.statusId === defaultStatusId)
+                                    .map((presence) => presence.musicianId)
+                                : event.presences.map((presence) => presence.musicianId)
+                              return !presentMusicians.includes(assignment.musicianId)
+                            })
+                            .map((assignment) => (
+                              <div key={assignment.id} className="attendance-item">
+                                <div className="attendance-info">
+                                  <span className="attendance-name">
+                                    {assignment.musician.firstName} {assignment.musician.lastName}
+                                  </span>
+                                  <span className="attendance-instrument">
+                                    {assignment.musician.instrument.name}
+                                  </span>
+                                </div>
+                                <span className="status-chip pending">Non répondu</span>
+                              </div>
+                            ))}
                         </div>
-                      </div>
+                      ) : (
+                        <p style={{ marginTop: '0.5rem', color: '#64748b' }}>
+                          Tous les musiciens assignés ont répondu présent ! 🎉
+                        </p>
+                      )}
                     </div>
                   )}
                 </>
