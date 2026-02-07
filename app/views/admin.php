@@ -22,7 +22,7 @@ function to_datetime_local(string $iso): string
       <h1 class="page-title">Administration</h1>
       <p class="page-subtitle">Gérez les pupitres, instruments, musiciens et concerts de la fanfare.</p>
     </div>
-    <form method="post" action="<?php echo h(base_url('/admin/logout')); ?>">
+    <form method="post" action="/admin/logout">
       <button type="submit" class="ghost-button">🚪 Déconnexion</button>
     </form>
   </div>
@@ -39,19 +39,19 @@ function to_datetime_local(string $iso): string
           <p class="muted-text"><?php echo count($sortedEvents); ?> concert(s)</p>
         </div>
         <div class="action-group">
-          <a class="ghost-button small" href="<?php echo h(base_url('/admin/export')); ?>" title="Exporter toutes les données en JSON">⬇️ Export JSON</a>
-          <form method="post" action="<?php echo h(base_url('/admin/import')); ?>" enctype="multipart/form-data" class="inline-form">
+          <a class="ghost-button small" href="/admin/export" title="Exporter toutes les données en JSON">⬇️ Export JSON</a>
+          <form method="post" action="/admin/import" enctype="multipart/form-data" class="inline-form">
             <label class="ghost-button small inline-file">
               ⬆️ Import JSON
               <input type="file" name="json_file" accept="application/json" class="inline-file-input" onchange="this.form.submit()" />
             </label>
           </form>
-          <form method="post" action="<?php echo h(base_url('/admin/clear')); ?>" class="inline-form">
+          <form method="post" action="/admin/clear" class="inline-form">
             <button type="submit" class="ghost-button small delete-button" data-confirm="Supprimer toutes les données ?">🧹 Vider la base</button>
           </form>
-          <a class="ghost-button small" href="<?php echo h(base_url('/admin/export/events')); ?>" title="Exporter les concerts en CSV">⬇️ CSV</a>
+          <a class="ghost-button small" href="/admin/export/events" title="Exporter les concerts en CSV">⬇️ CSV</a>
           <button type="button" class="ghost-button small" data-open-modal="event-import" title="Importer des concerts en CSV">⬆️ CSV</button>
-          <a class="ghost-button small" href="<?php echo h(base_url('/ical')); ?>" title="Exporter tous les concerts au format iCal">📅 iCal</a>
+          <a class="ghost-button small" href="/ical" title="Exporter tous les concerts au format iCal">📅 iCal</a>
           <button type="button" class="add-button" data-open-modal="event" title="Ajouter un concert">+</button>
         </div>
       </header>
@@ -158,7 +158,7 @@ function to_datetime_local(string $iso): string
           <p class="muted-text"><?php echo count($instruments); ?> instrument(s)</p>
         </div>
         <div class="action-group">
-          <a class="ghost-button small" href="<?php echo h(base_url('/admin/export/instruments')); ?>" title="Exporter les instruments en CSV">⬇️ CSV</a>
+          <a class="ghost-button small" href="/admin/export/instruments" title="Exporter les instruments en CSV">⬇️ CSV</a>
           <button type="button" class="ghost-button small" data-open-modal="instrument-import" title="Importer des instruments">⬆️ CSV</button>
           <button type="button" class="add-button" data-open-modal="instrument" title="Ajouter un instrument">+</button>
         </div>
@@ -196,7 +196,7 @@ function to_datetime_local(string $iso): string
           <p class="muted-text"><?php echo count($musicians); ?> musicien(s)</p>
         </div>
         <div class="action-group">
-          <a class="ghost-button small" href="<?php echo h(base_url('/admin/export/musicians')); ?>" title="Exporter les musiciens en CSV">⬇️ CSV</a>
+          <a class="ghost-button small" href="/admin/export/musicians" title="Exporter les musiciens en CSV">⬇️ CSV</a>
           <button type="button" class="ghost-button small" data-open-modal="import" title="Importer depuis CSV">⬆️ CSV</button>
           <button type="button" class="add-button" data-open-modal="musician" title="Ajouter un musicien">+</button>
         </div>
@@ -236,7 +236,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="section" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" class="form" data-admin-form="section">
+      <form method="post" action="/admin" class="form" data-admin-form="section">
         <input type="hidden" name="id" value="" />
         <label class="form-field">
           <span>Nom</span>
@@ -263,7 +263,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="instrument" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" class="form" data-admin-form="instrument">
+      <form method="post" action="/admin" class="form" data-admin-form="instrument">
         <input type="hidden" name="id" value="" />
         <label class="form-field">
           <span>Nom</span>
@@ -299,7 +299,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="musician" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" class="form" data-admin-form="musician">
+      <form method="post" action="/admin" class="form" data-admin-form="musician">
         <input type="hidden" name="id" value="" />
         <div class="form-grid">
           <label class="form-field">
@@ -351,7 +351,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="event" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" class="form" data-admin-form="event">
+      <form method="post" action="/admin" class="form" data-admin-form="event">
         <input type="hidden" name="id" value="" />
         <label class="form-field">
           <span>Titre</span>
@@ -405,7 +405,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="import" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" enctype="multipart/form-data" class="form">
+      <form method="post" action="/admin" enctype="multipart/form-data" class="form">
         <div class="import-block">
           <p class="import-help">Format attendu : <code>nom;prenom;instrument;mail;telephone</code> avec une première ligne d'en-tête.</p>
           <div class="import-actions">
@@ -431,7 +431,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="instrument-import" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" enctype="multipart/form-data" class="form">
+      <form method="post" action="/admin" enctype="multipart/form-data" class="form">
         <input type="hidden" name="action" value="instrument_import" />
         <div class="import-block">
           <p class="import-help">
@@ -460,7 +460,7 @@ function to_datetime_local(string $iso): string
       <button class="icon-button" data-close-modal="event-import" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="<?php echo h(base_url('/admin')); ?>" enctype="multipart/form-data" class="form">
+      <form method="post" action="/admin" enctype="multipart/form-data" class="form">
         <input type="hidden" name="action" value="event_import" />
         <div class="import-block">
           <p class="import-help">
