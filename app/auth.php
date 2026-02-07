@@ -19,8 +19,7 @@ function start_session(): void
 
 function is_app_authenticated(): bool
 {
-    start_session();
-    return !empty($_SESSION['app_authenticated']);
+    return true;
 }
 
 function is_admin_authenticated(): bool
@@ -70,9 +69,7 @@ function logout_admin(): void
 
 function require_app_login(): void
 {
-    if (!is_app_authenticated()) {
-        redirect('/login');
-    }
+    return;
 }
 
 function require_admin_login(): void
