@@ -1,21 +1,8 @@
-# Dépendances
-backend/node_modules
-frontend/node_modules
-
-# Build
-backend/dist
-frontend/dist
-
-# Bases de données
-backend/prisma/dev.db
-backend/prisma/dev.db-journal
-
 # Environnement
-backend/.env
-frontend/.env
+.env
 
 # Logs
 *.log
 
-# Vite
-frontend/.vite
+# OS
+.DS_Store
