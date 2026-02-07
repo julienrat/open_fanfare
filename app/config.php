@@ -99,6 +99,8 @@ return [
         'timezone' => $timezone,
         'app_password' => env_value('APP_PASSWORD'),
         'admin_secret' => env_value('ADMIN_SECRET'),
+        'admin_user' => env_value('ADMIN_USER', 'admin'),
+        'admin_token_ttl' => (int)env_value('ADMIN_TOKEN_TTL', '604800'),
     ],
     'db' => $database,
 ];
