@@ -20,10 +20,10 @@ $isAuthenticated = $data['isAuthenticated'] ?? is_app_authenticated();
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Open Fanfare</title>
-  <link rel="stylesheet" href="/assets/css/index.css" />
-  <link rel="stylesheet" href="/assets/css/app.css" />
-  <link rel="stylesheet" href="/assets/css/app-login.css" />
-  <link rel="stylesheet" href="/assets/css/modal.css" />
+  <link rel="stylesheet" href="<?php echo h(base_url('/assets/css/index.css')); ?>" />
+  <link rel="stylesheet" href="<?php echo h(base_url('/assets/css/app.css')); ?>" />
+  <link rel="stylesheet" href="<?php echo h(base_url('/assets/css/app-login.css')); ?>" />
+  <link rel="stylesheet" href="<?php echo h(base_url('/assets/css/modal.css')); ?>" />
 </head>
 <body>
 <div class="app">
@@ -40,11 +40,11 @@ $isAuthenticated = $data['isAuthenticated'] ?? is_app_authenticated();
           <span></span>
         </button>
         <nav class="nav-links" data-menu>
-          <a class="nav-link <?php echo $activePath === '/' ? 'active' : ''; ?>" href="/">Présences</a>
-          <a class="nav-link <?php echo $activePath === '/agenda' ? 'active' : ''; ?>" href="/agenda">Agenda</a>
-          <a class="nav-link <?php echo $activePath === '/stats' ? 'active' : ''; ?>" href="/stats">Statistiques</a>
-          <a class="nav-link <?php echo $activePath === '/admin' ? 'active' : ''; ?>" href="/admin">Administration</a>
-          <form method="post" action="/logout" class="inline-form">
+          <a class="nav-link <?php echo $activePath === '/' ? 'active' : ''; ?>" href="<?php echo h(base_url('/')); ?>">Présences</a>
+          <a class="nav-link <?php echo $activePath === '/agenda' ? 'active' : ''; ?>" href="<?php echo h(base_url('/agenda')); ?>">Agenda</a>
+          <a class="nav-link <?php echo $activePath === '/stats' ? 'active' : ''; ?>" href="<?php echo h(base_url('/stats')); ?>">Statistiques</a>
+          <a class="nav-link <?php echo $activePath === '/admin' ? 'active' : ''; ?>" href="<?php echo h(base_url('/admin')); ?>">Administration</a>
+          <form method="post" action="<?php echo h(base_url('/logout')); ?>" class="inline-form">
             <button type="submit" class="logout-button">Déconnexion</button>
           </form>
         </nav>
@@ -65,7 +65,7 @@ $isAuthenticated = $data['isAuthenticated'] ?? is_app_authenticated();
   <?php endif; ?>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="/assets/js/app.js"></script>
-<script src="/assets/js/charts.js"></script>
+<script src="<?php echo h(base_url('/assets/js/app.js')); ?>"></script>
+<script src="<?php echo h(base_url('/assets/js/charts.js')); ?>"></script>
 </body>
 </html>

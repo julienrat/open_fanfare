@@ -7,7 +7,7 @@ $flash = $flash ?? null;
       <h1>🔐 Administration</h1>
       <p>Veuillez vous identifier pour accéder à l'interface d'administration</p>
     </div>
-    <form method="post" action="/admin" class="login-form">
+    <form method="post" action="<?php echo h(base_url('/admin')); ?>" class="login-form">
       <div class="form-field">
         <label for="password">Mot de passe</label>
         <input id="password" type="password" name="password" placeholder="Entrez le mot de passe" autofocus required />

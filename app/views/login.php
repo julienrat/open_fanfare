@@ -7,7 +7,7 @@ $flash = $flash ?? null;
       <h1 class="app-login-title">🎺 Open Fanfare</h1>
       <p class="app-login-subtitle">Accès sécurisé</p>
     </div>
-    <form method="post" action="/login" class="app-login-form">
+    <form method="post" action="<?php echo h(base_url('/login')); ?>" class="app-login-form">
       <label class="form-field">
         <span>Mot de passe</span>
         <input type="password" name="password" placeholder="Entrez le mot de passe" autofocus required />

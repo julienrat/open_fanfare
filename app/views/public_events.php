@@ -335,7 +335,7 @@ function compute_missing_data(array $event, ?array $defaultStatus): array
       <button class="icon-button" data-close-modal="presence" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body">
-      <form method="post" action="/presence" class="form" data-presence-form>
+      <form method="post" action="<?php echo h(base_url('/presence')); ?>" class="form" data-presence-form>
         <input type="hidden" name="event_id" value="" />
         <input type="hidden" name="musician_id" value="" />
 

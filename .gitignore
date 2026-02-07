@@ -1,5 +1,7 @@
 # Environnement
 .env
+.~lock.*
+concerts-import.csv
 
 # Logs
 *.log
