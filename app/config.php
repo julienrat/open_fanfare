@@ -38,6 +38,15 @@ load_env(__DIR__ . '/../.env');
 $timezone = getenv('APP_TIMEZONE') ?: 'Europe/Paris';
 @date_default_timezone_set($timezone);
 
+$baseUrl = '';
+if (isset($_SERVER['SCRIPT_NAME'])) {
+    $baseUrl = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+    if ($baseUrl === '.' || $baseUrl === '/') {
+        $baseUrl = '';
+    }
+}
+define('BASE_URL', $baseUrl);
+
 function env_value(string $key, string $default = ''): string
 {
     $value = getenv($key);

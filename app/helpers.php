@@ -5,8 +5,23 @@ function h(?string $value): string
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
+function base_url(string $path = ''): string
+{
+    $base = defined('BASE_URL') ? BASE_URL : '';
+    if ($path === '') {
+        return $base;
+    }
+    if ($path[0] !== '/') {
+        $path = '/' . $path;
+    }
+    return $base . $path;
+}
+
 function redirect(string $path): void
 {
+    if (!preg_match('~^https?://~i', $path)) {
+        $path = base_url($path);
+    }
     header('Location: ' . $path);
     exit;
 }

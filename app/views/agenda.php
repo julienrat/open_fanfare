@@ -138,16 +138,16 @@ $weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       <h1 class="page-title">Agenda des concerts</h1>
       <p class="page-subtitle">Consultez le calendrier des concerts et les statistiques d'instruments.</p>
     </div>
-    <a class="primary-button" href="/ical" title="Exporter l'agenda au format iCal">📅 Exporter dans mon agenda</a>
+    <a class="primary-button" href="<?php echo h(base_url('/ical')); ?>" title="Exporter l'agenda au format iCal">📅 Exporter dans mon agenda</a>
   </div>
 
   <div class="agenda-layout">
     <div class="calendar-section">
       <div class="calendar-card">
         <div class="calendar-header">
-          <a class="month-nav-button" href="/agenda?month=<?php echo $prevMonth->format('n'); ?>&year=<?php echo $prevMonth->format('Y'); ?>">←</a>
+          <a class="month-nav-button" href="<?php echo h(base_url('/agenda')); ?>?month=<?php echo $prevMonth->format('n'); ?>&year=<?php echo $prevMonth->format('Y'); ?>">←</a>
           <h2 class="current-month"><?php echo h(format_month_name($monthStart)); ?></h2>
-          <a class="month-nav-button" href="/agenda?month=<?php echo $nextMonth->format('n'); ?>&year=<?php echo $nextMonth->format('Y'); ?>">→</a>
+          <a class="month-nav-button" href="<?php echo h(base_url('/agenda')); ?>?month=<?php echo $nextMonth->format('n'); ?>&year=<?php echo $nextMonth->format('Y'); ?>">→</a>
         </div>
 
         <div class="calendar-weekdays">

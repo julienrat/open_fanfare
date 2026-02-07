@@ -71,15 +71,13 @@ function logout_admin(): void
 function require_app_login(): void
 {
     if (!is_app_authenticated()) {
-        header('Location: /login');
-        exit;
+        redirect('/login');
     }
 }
 
 function require_admin_login(): void
 {
     if (!is_admin_authenticated()) {
-        header('Location: /admin');
-        exit;
+        redirect('/admin');
     }
 }

@@ -7,6 +7,12 @@ require_once __DIR__ . '/../app/data.php';
 require_once __DIR__ . '/../app/ical.php';
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+if (defined('BASE_URL') && BASE_URL !== '' && str_starts_with($path, BASE_URL)) {
+    $path = substr($path, strlen(BASE_URL));
+    if ($path === '') {
+        $path = '/';
+    }
+}
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($path === '/login') {
