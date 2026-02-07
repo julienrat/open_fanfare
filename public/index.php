@@ -15,28 +15,10 @@ if (defined('BASE_URL') && BASE_URL !== '' && str_starts_with($path, BASE_URL)) 
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-if ($path === '/login') {
-    if (is_app_authenticated()) {
-        redirect('/');
-    }
-    if ($method === 'POST') {
-        $password = request_string('password');
-        if (login_app($password)) {
-            redirect('/');
-        }
-        set_flash('error', 'Mot de passe incorrect.');
-        redirect('/login');
-    }
-    render('auth', ['path' => $path, 'isAuthenticated' => false, 'flash' => get_flash()]);
-    exit;
-}
-
 if ($path === '/logout' && $method === 'POST') {
     logout_all();
-    redirect('/login');
+    redirect('/');
 }
-
-require_app_login();
 
 if ($path === '/admin/export' && $method === 'GET') {
     require_admin_login();
