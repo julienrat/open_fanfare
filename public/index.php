@@ -27,7 +27,7 @@ if ($path === '/login') {
         set_flash('error', 'Mot de passe incorrect.');
         redirect('/login');
     }
-    render('login', ['path' => $path, 'isAuthenticated' => false, 'flash' => get_flash()]);
+    render('auth', ['path' => $path, 'isAuthenticated' => false, 'flash' => get_flash()]);
     exit;
 }
 
