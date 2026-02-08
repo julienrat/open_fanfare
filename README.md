@@ -1,143 +1,128 @@
 # 🎺 Open Fanfare
 
-Application web pour piloter la vie d’une fanfare : concerts, présences, musiciens, instruments et statistiques.  
-Pensée pour être simple, rapide et agréable à utiliser, l’interface combine planning, réponses en un clic et visualisations claires.
+Application web pour gérer les concerts, les présences, les musiciens et les instruments d’une fanfare.  
+Interface simple, moderne et efficace avec agenda, statistiques et exports.
 
-## 📋 Table des matières
-
-- [À propos](#-à-propos)
-- [Fonctionnalités](#-fonctionnalités)
-- [Prérequis](#-prérequis)
-- [Installation serveur](#-installation-serveur-nodejs--sqlite)
-- [Configuration](#-configuration)
-- [Initialiser la base (manuel)](#-initialiser-la-base-manuel)
-- [Lancement](#-lancement)
-- [Structure du projet](#-structure-du-projet)
-
-## 🎯 À propos
-
-**Open Fanfare** centralise tout ce dont une fanfare a besoin pour organiser ses concerts :
-- 🗓️ planifier les événements et garder un agenda à jour
-- 🙋 recueillir les présences des musiciens en quelques secondes
-- 🎺 suivre la répartition des instruments (camemberts + stats)
-- 👥 gérer le fichier des musiciens (contacts, instruments, couleurs)
-- 🎼 documenter les concerts (description, setlist en Markdown)
-- 📥 importer/exporter les données (CSV / JSON)
-
-L’application est désormais un **monolithe Node.js** avec **SQLite**, conçu pour une installation simple sur un serveur classique (Nginx en reverse proxy).
+---
 
 ## ✨ Fonctionnalités
 
-### Interface publique
-- 📅 **Vue Présences** : Liste des événements avec enregistrement des présences
-- 📆 **Vue Agenda** : Calendrier mensuel des concerts + statistiques
-- ✅ Enregistrement de présence via un pop-up modal (Présent/Absent/Peut-être)
-- 📊 **Graphiques** : Visualisation par instrument
-- 📥 **Export iCal**
-- 🎨 Interface moderne et responsive
+- ✅ Présences aux concerts (Présent / Absent / Peut-être)
+- 📅 Agenda mensuel + popup détails
+- 📊 Statistiques par instrument
+- 🎷 Gestion des pupitres, instruments, musiciens
+- 🎪 Gestion des concerts (markdown dans description & setlist)
+- 📥 Import CSV (musiciens / instruments / concerts)
+- 📤 Export CSV + JSON
+- 📅 Export iCal
 
-### Interface d'administration
-- 🔐 **Connexion sécurisée** (serveur)
-- 🎵 **Gestion des pupitres** : CRUD complet
-- 🎷 **Gestion des instruments** : CRUD complet avec couleurs
-- 👤 **Gestion des musiciens** : CRUD complet
-- 🎪 **Gestion des événements** : CRUD complet
-- 📥 **Import CSV** : musiciens, instruments, concerts
-- 📤 **Export CSV** : musiciens, instruments, concerts
-- 🔄 **Assignation automatique** : tous les musiciens assignés à la création d’un événement
+---
 
-## 📦 Prérequis
+## 🧰 Pré-requis
 
-- **Node.js 18+** (npm inclus)
-- **Nginx** (recommandé pour la prod)
-- **SQLite** (fichier local, aucune installation serveur nécessaire)
+- **Node.js 18+** (avec npm)
+- **Nginx** (recommandé en production)
+- **SQLite** (fichier local, rien à installer côté serveur)
 
-## 🚀 Installation
+---
+
+## 🚀 Installation rapide
 
 ```bash
 git clone <url-du-depot>
 cd open_fanfare
-```
-
-## 🧰 Installation serveur (Node.js + SQLite)
-
-### 1) Installer les dépendances
-
-Exemple Ubuntu/Debian :
-
-```bash
-sudo apt update
-sudo apt install -y nginx nodejs npm
-```
-
-### 2) Configurer l’application
-
-Créez un fichier `.env` à la racine du projet :
-
-```env
-PORT=8000
-BASE_URL=""
-DB_PATH="/var/www/open_fanfare/data.sqlite"
-```
-
-### 3) Installer les dépendances Node
-
-```bash
 npm install
 ```
 
-### 4) Importer les données (optionnel)
+---
+
+## ⚙️ Configuration (.env)
+
+Créer un fichier `.env` à la racine :
+
+```env
+PORT=8000
+BASE_URL="/sondages"
+DB_PATH="/var/www/open_fanfare/data.sqlite"
+```
+
+- `PORT` : port local Node (par défaut 8000)
+- `BASE_URL` : sous-dossier si déployé dans `/sondages` (vide si racine)
+- `DB_PATH` : chemin vers la base SQLite
+
+---
+
+## 📥 Import des données (JSON export)
 
 ```bash
 node scripts/import_json.js /chemin/vers/openfanfare-export.json
 ```
 
-### 5) Configurer le serveur web
+---
 
-Exemple Nginx (racine sur `public/`) :
+## ▶️ Lancer en local
+
+```bash
+npm start
+```
+Puis :
+```
+http://localhost:8000
+```
+
+---
+
+## 🌍 Installation serveur (Nginx + Node)
+
+### 1) Lancer Node (avec un process manager recommandé)
+
+Exemple PM2 :
+
+```bash
+npm install -g pm2
+pm2 start server.js --name openfanfare
+pm2 save
+```
+
+### 2) Config Nginx (reverse proxy)
 
 ```nginx
 server {
-  listen 80;
-  server_name ton-domaine.fr;
+    listen 80;
+    server_name ton-domaine.fr;
 
-  root /var/www/open_fanfare;
+    root /var/www/open_fanfare;
 
-  location / {
+    location /sondages/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /sondages;
+    }
+}
+```
+
+Si ton site est à la racine (`/`), supprime `/sondages` partout :
+
+```nginx
+location / {
     proxy_pass http://127.0.0.1:8000;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-  }
 }
 ```
 
-Redémarrez Nginx :
-
+Puis :
 ```bash
-sudo systemctl restart nginx
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-## ⚙️ Configuration
-
-Créez un fichier `.env` à la racine du projet :
-
-```env
-PORT=8000
-BASE_URL=""
-DB_PATH="./data.sqlite"
-```
-
-## 🎬 Lancement
-
-En local :
-
-```bash
-npm start
-```
-
-En production, utilise un process manager (ex: systemd, PM2).
+---
 
 ## 📁 Structure du projet
 
