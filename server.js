@@ -11,7 +11,6 @@ dotenv.config();
 const app = express();
 const upload = multer({ dest: path.join(process.cwd(), 'tmp_uploads') });
 const PORT = process.env.PORT || 8000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'cornichon2000';
 
 const BASE_URL = (process.env.BASE_URL || '').replace(/\/$/, '');
 
@@ -37,24 +36,6 @@ if (BASE_URL) {
   app.use(`${BASE_URL}/assets`, staticAssets);
 }
 
-const parseBasicAuth = (req) => {
-  const header = req.headers.authorization || '';
-  if (!header.startsWith('Basic ')) return null;
-  const decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
-  const [user, pass] = decoded.split(':');
-  return { user: user || '', pass: pass || '' };
-};
-
-const adminAuth = (req, res, next) => {
-  const creds = parseBasicAuth(req);
-  if (creds && creds.pass === ADMIN_PASSWORD) {
-    return next();
-  }
-  res.setHeader('WWW-Authenticate', 'Basic realm=\"Open Fanfare Admin\"');
-  return res.status(401).send('Unauthorized');
-};
-
-app.use(`${BASE_URL}/admin`, adminAuth);
 
 // Helpers
 const h = (v) => (v == null ? '' : String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
