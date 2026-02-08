@@ -1,4 +1,24 @@
 (() => {
+  const toggleAdminDanger = (visible) => {
+    document.querySelectorAll('.admin-danger').forEach((el) => {
+      el.classList.toggle('is-hidden', !visible);
+    });
+  };
+
+  let ctrlDown = false;
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Control' && !ctrlDown) {
+      ctrlDown = true;
+      toggleAdminDanger(true);
+    }
+  });
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'Control') {
+      ctrlDown = false;
+      toggleAdminDanger(false);
+    }
+  });
+
   const menuToggle = document.querySelector('[data-menu-toggle]');
   const menu = document.querySelector('[data-menu]');
   if (menuToggle && menu) {
