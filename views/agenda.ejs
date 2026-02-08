@@ -29,6 +29,12 @@ const formatDayTitle = (dayKey) => {
   const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 };
+const dateKeyLocal = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 const computeEventStats = (event) => {
   const totalAssignments = (event.assignments || []).length;
   const totalResponses = (event.presences || []).length;
@@ -61,7 +67,7 @@ const eventStats = eventsList.map(computeEventStats);
 const eventsByDay = {};
 for (const stat of eventStats) {
   const d = new Date(stat.event.date);
-  const key = d.toISOString().slice(0,10);
+  const key = dateKeyLocal(d);
   eventsByDay[key] = eventsByDay[key] || [];
   eventsByDay[key].push(stat);
 }
@@ -104,12 +110,17 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
             const weekDayIndexEnd = (endOfGrid.getDay() + 6) % 7;
             endOfGrid.setDate(endOfGrid.getDate() + (6 - weekDayIndexEnd));
             for (let current = new Date(startOfGrid); current <= endOfGrid; current.setDate(current.getDate() + 1)) {
-              const dayKey = current.toISOString().slice(0,10);
+              const dayKey = dateKeyLocal(current);
               const isCurrentMonth = current.getMonth() === monthStart.getMonth();
               const hasEvents = !!eventsByDay[dayKey];
               const modalId = hasEvents ? `agenda-day-${dayKey}` : '';
           %>
-            <button type="button" class="calendar-day <%= !isCurrentMonth ? 'inactive' : '' %> <%= hasEvents ? 'has-events' : '' %>" <%= hasEvents ? `data-open-modal="${modalId}"` : '' %> <%= (!isCurrentMonth && !hasEvents) ? 'disabled' : '' %>>
+            <button
+              type="button"
+              class="calendar-day <%= !isCurrentMonth ? 'inactive' : '' %> <%= hasEvents ? 'has-events' : '' %>"
+              <%= hasEvents ? `data-open-modal=${helpers.h(modalId)}` : '' %>
+              <%= (!isCurrentMonth && !hasEvents) ? 'disabled' : '' %>
+            >
               <span class="day-number"><%= current.getDate() %></span>
               <% if (hasEvents) { %>
                 <div class="day-events">
