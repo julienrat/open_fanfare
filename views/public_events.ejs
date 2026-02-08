@@ -50,6 +50,17 @@ const activePath = path || '/';
 
 <div class="page">
   <h1 class="page-title" data-presences-title>Présences aux concerts</h1>
+  <div class="form-field" style="max-width: 360px; margin: 0.5rem 0 1rem;">
+    <span>Qui êtes-vous ?</span>
+    <select id="who-are-you" data-who-are-you>
+      <option value="">Choisir…</option>
+      <% musiciansList.forEach((musician) => { %>
+        <option value="<%= musician.id %>" data-first-name="<%= helpers.h(musician.firstName) %>" data-last-name="<%= helpers.h(musician.lastName) %>">
+          <%= helpers.h(musician.firstName + ' ' + musician.lastName) %>
+        </option>
+      <% }) %>
+    </select>
+  </div>
   <p class="page-subtitle">
     Consultez les concerts à venir, confirmez votre présence et visualisez la participation par instrument.
   </p>

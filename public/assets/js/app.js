@@ -304,13 +304,44 @@
     }
   };
 
-  const updateRespondButtons = () => {
+  const wireWhoAreYou = () => {
+    const select = document.querySelector('[data-who-are-you]');
+    if (!select) return;
     try {
-      const name = window.localStorage.getItem('lastMusicianName');
-      const id = window.localStorage.getItem('lastMusicianId');
-      if (!name || !id) return;
+      const savedId = window.localStorage.getItem('lastMusicianId');
+      if (savedId) {
+        select.value = savedId;
+      }
     } catch (e) {
-      return;
+      // ignore
+    }
+    select.addEventListener('change', () => {
+      const option = select.options[select.selectedIndex];
+      const firstName = option ? option.getAttribute('data-first-name') || '' : '';
+      const lastName = option ? option.getAttribute('data-last-name') || '' : '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      const musicianId = select.value || '';
+      try {
+        if (musicianId) {
+          window.localStorage.setItem('lastMusicianId', musicianId);
+          if (fullName.trim()) {
+            window.localStorage.setItem('lastMusicianName', fullName.trim());
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+      updatePresencesTitle();
+      updateRespondButtons();
+    });
+  };
+
+  const updateRespondButtons = () => {
+    let savedId = null;
+    try {
+      savedId = window.localStorage.getItem('lastMusicianId');
+    } catch (e) {
+      savedId = null;
     }
 
     document.querySelectorAll('[data-open-modal=\"presence\"]').forEach((button) => {
@@ -319,7 +350,6 @@
         .map((value) => value.trim())
         .filter((value) => value !== '');
       const responseMapRaw = button.getAttribute('data-response-map') || '';
-      const savedId = window.localStorage.getItem('lastMusicianId');
       const defaultLabel = button.getAttribute('data-default-label') || 'Répondre';
       if (savedId && responded.includes(savedId)) {
         let label = 'Déjà répondu';
@@ -351,6 +381,7 @@
 
   updatePresencesTitle();
   updateRespondButtons();
+  wireWhoAreYou();
 
   document.querySelectorAll('[data-expand-button]').forEach((button) => {
     button.addEventListener('click', () => {
