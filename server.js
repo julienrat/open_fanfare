@@ -125,6 +125,28 @@ const escapeHtml = (value) => {
 
 const raw = (value) => ({ __raw: String(value ?? '') });
 
+const parseSetlistRows = (text) => {
+  if (!text) return [];
+  const lines = String(text).split(/\r\n|\r|\n/);
+  const rows = [];
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const headerMatch = trimmed.match(/^#+\s+(.+)/);
+    if (headerMatch) {
+      rows.push({ type: 'header', text: headerMatch[1] });
+      return;
+    }
+    const listMatch = trimmed.match(/^[-*]\s+(.+)/);
+    if (listMatch) {
+      rows.push({ type: 'item', text: listMatch[1] });
+      return;
+    }
+    rows.push({ type: 'item', text: trimmed });
+  });
+  return rows;
+};
+
 const decodeHtmlEntities = (value) => {
   if (!value) return value;
   let s = String(value);
@@ -435,6 +457,53 @@ app.get(`${BASE_URL}/ical`, (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="concerts-fanfare.ics"');
   res.send(ical);
 });
+
+const handlePrintSetlist = (req, res) => {
+  const eventId = Number(req.params.id || 0);
+  const events = getEvents();
+  const event = events.find((e) => e.id === eventId);
+  if (!event || !event.setlist) {
+    res.status(404).send('Setlist introuvable');
+    return;
+  }
+  const rows = parseSetlistRows(event.setlist);
+  const title = escapeHtml(event.title);
+  const date = escapeHtml(formatDateFr(event.date));
+  const titleWithDate = `${title} - ${date}`;
+  const html = `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Impression - ${titleWithDate}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; color: #0f172a; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .meta { color: #64748b; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+    .section { background: #f8fafc; font-weight: 700; }
+    @media print { button { display: none; } }
+  </style>
+</head>
+<body>
+  <h1>${titleWithDate}</h1>
+  <table>
+    ${rows.map((row) => row.type === 'header'
+      ? `<tr><td class="section">${escapeHtml(row.text)}</td></tr>`
+      : `<tr><td>${escapeHtml(row.text)}</td></tr>`).join('')}
+  </table>
+  <script>window.print();</script>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+};
+
+const printRoutes = ['/print/setlist/:id'];
+if (BASE_URL) {
+  printRoutes.push(`${BASE_URL}/print/setlist/:id`);
+}
+app.get(printRoutes, handlePrintSetlist);
 
 app.get(`${BASE_URL}/admin`, (req, res) => {
   const events = getEvents();

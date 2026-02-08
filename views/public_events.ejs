@@ -151,8 +151,11 @@ const activePath = path || '/';
               </div>
 
               <% if (event.setlist) { %>
-                <div class="attendance-list" style="margin-top: 1rem;">
-                  <div class="attendance-header"><h3>Playlist</h3></div>
+                <div class="attendance-list setlist-compact" style="margin-top: 0.35rem;">
+                  <div class="attendance-header" style="display:flex;align-items:center;justify-content:space-between;">
+                    <h3>Playlist</h3>
+                    <a class="ghost-button small" href="<%= helpers.baseUrl('/print/setlist/' + event.id) %>" target="_blank" title="Imprimer la playlist">🖨️</a>
+                  </div>
                   <div class="attendance-items">
                     <div class="card-description"><%- helpers.markdownToHtml(event.setlist) %></div>
                   </div>
