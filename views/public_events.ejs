@@ -145,8 +145,15 @@ const activePath = path || '/';
             </div>
             <div class="modal-body">
               <div class="attendance-list" style="margin-bottom: 1rem;">
-                <div class="attendance-header">
+                <div class="attendance-header" style="display:flex;align-items:center;justify-content:space-between;">
                   <h3>Infos du concert</h3>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <% const detailCommentsHeader = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+                    <% if (detailCommentsHeader.length) { const commentsModalId = `comments-${event.id}`; %>
+                      <button type="button" class="ghost-button small" data-open-modal="<%= helpers.h(commentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+                    <% } %>
+                    <a class="ghost-button small" href="<%= helpers.baseUrl('/ical/event/' + event.id) %>" title="Importer dans mon agenda">📅 Importer dans mon agenda</a>
+                  </div>
                 </div>
                 <div class="attendance-items">
                   <div class="card-meta" style="margin-bottom: 0.75rem;">
@@ -280,6 +287,24 @@ const activePath = path || '/';
             </div>
           </div>
         </div>
+        <% const detailComments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+        <% if (detailComments.length) { const commentsModalId = `comments-${event.id}`; %>
+          <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(commentsModalId) %>">
+            <div class="modal">
+              <div class="modal-header">
+                <h2>Commentaires</h2>
+                <button class="icon-button" data-close-modal="<%= helpers.h(commentsModalId) %>" aria-label="Fermer">×</button>
+              </div>
+              <div class="modal-body">
+                <ul class="comments-list">
+                  <% detailComments.forEach((p) => { %>
+                    <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+                  <% }) %>
+                </ul>
+              </div>
+            </div>
+          </div>
+        <% } %>
       <% }) %>
     </div>
   <% } %>

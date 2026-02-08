@@ -175,13 +175,22 @@ sortedEvents.forEach((event) => {
     <div class="modal">
       <div class="modal-header">
         <h2><%= helpers.h(event.title) %></h2>
-        <button class="icon-button" data-close-modal="<%= helpers.h(eventModalId) %>" aria-label="Fermer">×</button>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/ical/event/' + event.id) %>" title="Importer dans mon agenda">📅 Importer dans mon agenda</a>
+          <button class="icon-button" data-close-modal="<%= helpers.h(eventModalId) %>" aria-label="Fermer">×</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="event-detail-meta">
           <span>📅 <%= helpers.h(helpers.formatDateFr(event.date)) %></span>
           <% if (event.location) { %><span>📍 <%= helpers.h(event.location) %></span><% } %>
         </div>
+        <% const statsComments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+        <% if (statsComments.length) { const statsCommentsModalId = `stats-comments-${event.id}`; %>
+          <div class="form-actions" style="margin: 0.75rem 0 0;">
+            <button type="button" class="ghost-button" data-open-modal="<%= helpers.h(statsCommentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+          </div>
+        <% } %>
         <% if (event.description) { %>
           <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
         <% } %>
@@ -189,17 +198,25 @@ sortedEvents.forEach((event) => {
           <div class="attendance-header" style="margin-bottom: 0.35rem;"><h3>Playlist</h3></div>
           <div class="card-description"><%- helpers.markdownToHtml(event.setlist) %></div>
         <% } %>
-        <% const comments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
-        <% if (comments.length) { %>
-          <div class="comments-section">
-            <h4>Commentaires</h4>
-            <ul class="comments-list">
-              <% comments.forEach((p) => { %>
-                <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
-              <% }) %>
-            </ul>
-          </div>
-        <% } %>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<% sortedEvents.forEach((event) => { const statsComments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); if (!statsComments.length) return; const statsCommentsModalId = `stats-comments-${event.id}`; %>
+  <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(statsCommentsModalId) %>">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Commentaires</h2>
+        <button class="icon-button" data-close-modal="<%= helpers.h(statsCommentsModalId) %>" aria-label="Fermer">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted-text">Concert : <strong><%= helpers.h(event.title) %></strong></p>
+        <ul class="comments-list">
+          <% statsComments.forEach((p) => { %>
+            <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+          <% }) %>
+        </ul>
       </div>
     </div>
   </div>

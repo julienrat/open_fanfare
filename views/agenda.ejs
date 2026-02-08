@@ -47,6 +47,9 @@ const computeEventStats = (event) => {
   });
   const defaultStatus = statusesList.find((s) => s.isDefault) || null;
   const presentPresences = defaultStatus ? (event.presences || []).filter((p) => p.statusId === defaultStatus.id) : (event.presences || []);
+  const presentNames = presentPresences
+    .map((p) => `${p.musician.firstName} ${p.musician.lastName}`.trim())
+    .sort((a, b) => a.localeCompare(b, 'fr'));
   const instrumentsMap = new Map();
   presentPresences.forEach((p) => {
     const inst = p.musician.instrument;
@@ -61,6 +64,7 @@ const computeEventStats = (event) => {
     responsePercentage,
     responsesByStatus,
     instrumentsStats: Array.from(instrumentsMap.values()),
+    presentNames,
   };
 };
 const eventStats = eventsList.map(computeEventStats);
@@ -154,6 +158,28 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
                 <% if (stat.event.location) { %><span>📍 <%= helpers.h(stat.event.location) %></span><% } %>
               </div>
             </div>
+            <div class="form-actions" style="margin: 0.5rem 0 0;">
+              <% const agendaComments = (stat.event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+              <% if (agendaComments.length) { const agendaCommentsModalId = `agenda-comments-${stat.event.id}`; %>
+                <button type="button" class="ghost-button" data-open-modal="<%= helpers.h(agendaCommentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+              <% } %>
+              <a class="ghost-button" href="<%= helpers.baseUrl('/ical/event/' + stat.event.id) %>" title="Importer dans mon agenda">📅 Importer dans mon agenda</a>
+            </div>
+            <% if (stat.event.description) { %>
+              <div class="card-description"><%- helpers.markdownToHtml(stat.event.description) %></div>
+            <% } %>
+            <% if (stat.event.setlist) { %>
+              <div class="attendance-header" style="margin: 0.75rem 0 0.35rem;"><h3>Playlist</h3></div>
+              <div class="card-description"><%- helpers.markdownToHtml(stat.event.setlist) %></div>
+            <% } %>
+            <% if (stat.presentNames && stat.presentNames.length) { %>
+              <div class="attendance-header" style="margin: 0.85rem 0 0.35rem;"><h3>Musiciens présents</h3></div>
+              <div class="presence-pills" style="display:flex;flex-direction:column;gap:0.35rem;">
+                <% stat.presentNames.forEach((name) => { %>
+                  <span class="stat-badge" style="align-self:flex-start;"><%= helpers.h(name) %></span>
+                <% }) %>
+              </div>
+            <% } %>
             <div class="event-stats-row">
               <div class="stat-box"><span class="stat-label">Présents</span><span class="stat-value"><%= stat.presentCount %></span></div>
               <div class="stat-box"><span class="stat-label">Réponses</span><span class="stat-value"><%= stat.totalResponses %></span></div>
@@ -183,6 +209,27 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
       </div>
     </div>
   </div>
+<% }) %>
+
+<% Object.keys(eventsByDay).forEach((dayKey) => { const stats = eventsByDay[dayKey]; %>
+  <% stats.forEach((stat) => { const comments = (stat.event.presences || []).filter((p) => p.comment && String(p.comment).trim()); if (!comments.length) return; const agendaCommentsModalId = `agenda-comments-${stat.event.id}`; %>
+    <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(agendaCommentsModalId) %>">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Commentaires</h2>
+          <button class="icon-button" data-close-modal="<%= helpers.h(agendaCommentsModalId) %>" aria-label="Fermer">×</button>
+        </div>
+        <div class="modal-body">
+          <p class="muted-text">Concert : <strong><%= helpers.h(stat.event.title) %></strong></p>
+          <ul class="comments-list">
+            <% comments.forEach((p) => { %>
+              <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  <% }) %>
 <% }) %>
 
 <%- include('partials/footer', { helpers }) %>

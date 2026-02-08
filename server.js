@@ -121,6 +121,39 @@ const markdownToHtml = (text) => {
   return html;
 };
 
+const markdownToText = (text) => {
+  if (!text) return '';
+  let value = String(text);
+  value = value.replace(/\r\n|\r/g, '\n');
+  value = value.replace(/^#{1,6}\s+/gm, '');
+  value = value.replace(/^[-*]\s+/gm, '');
+  value = value.replace(/\*\*(.+?)\*\*/g, '$1');
+  value = value.replace(/\*(.+?)\*/g, '$1');
+  value = value.replace(/\[(.+?)\]\((https?:\/\/[^\s]+)\)/g, '$1 ($2)');
+  return value.trim();
+};
+
+const buildEventDescription = (event) => {
+  const parts = [];
+  if (event.description) {
+    parts.push(markdownToText(event.description));
+  }
+  if (event.setlist) {
+    parts.push(`Playlist:\n${markdownToText(event.setlist)}`);
+  }
+  const defaultStatus = (event.presences || []).find((p) => p.status && p.status.isDefault)?.status || null;
+  const presentPresences = defaultStatus
+    ? (event.presences || []).filter((p) => p.statusId === defaultStatus.id)
+    : (event.presences || []);
+  if (presentPresences.length) {
+    const names = presentPresences
+      .map((p) => `${p.musician.firstName} ${p.musician.lastName}`.trim())
+      .sort((a, b) => a.localeCompare(b, 'fr'));
+    parts.push(`Musiciens:\n${names.join(', ')}`);
+  }
+  return parts.filter(Boolean).join('\n\n').trim();
+};
+
 const escapeHtml = (value) => {
   if (value == null) return '';
   return String(value)
@@ -463,6 +496,25 @@ app.get(`${BASE_URL}/ical`, (req, res) => {
   const ical = generateIcal(events);
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="concerts-fanfare.ics"');
+  res.send(ical);
+});
+
+const eventIcalRoutes = ['/ical/event/:id'];
+if (BASE_URL) {
+  eventIcalRoutes.push(`${BASE_URL}/ical/event/:id`);
+}
+app.get(eventIcalRoutes, (req, res) => {
+  const eventId = Number(req.params.id || 0);
+  const events = getEvents();
+  const event = events.find((e) => e.id === eventId);
+  if (!event) {
+    res.status(404).send('Evenement introuvable');
+    return;
+  }
+  const description = buildEventDescription(event);
+  const ical = generateIcal([{ ...event, description }]);
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="concert-${eventId}.ics"`);
   res.send(ical);
 });
 
