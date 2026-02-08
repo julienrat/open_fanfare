@@ -75,6 +75,11 @@ const activePath = path || '/';
             presentPresences = presences;
           }
           const respondedIds = Array.from(new Set(presences.map((p) => p.musicianId)));
+          const responseMap = {};
+          presences.forEach((p) => {
+            responseMap[p.musicianId] = { statusId: p.statusId, comment: p.comment || '' };
+          });
+          const responseMapAttr = encodeURIComponent(JSON.stringify(responseMap));
           const respondedAttr = respondedIds.join(',');
         %>
         <article class="card clickable" data-open-modal="<%= detailModalId %>">
@@ -98,6 +103,7 @@ const activePath = path || '/';
               data-event-id="<%= event.id %>"
               data-event-title="<%= helpers.h(event.title) %>"
               data-responded-ids="<%= helpers.h(respondedAttr) %>"
+              data-response-map="<%= helpers.h(responseMapAttr) %>"
               data-default-label="Répondre"
               data-stop-propagation
             >
@@ -116,20 +122,26 @@ const activePath = path || '/';
               <button class="icon-button" data-close-modal="<%= detailModalId %>" aria-label="Fermer">×</button>
             </div>
             <div class="modal-body">
-              <div class="card-meta" style="margin-bottom: 1rem;">
-                <span class="stat-badge">📅 <%= helpers.h(formatEventDate(event.date)) %></span>
-                <% if (event.location) { %><span class="stat-badge">📍 <%= helpers.h(event.location) %></span><% } %>
-                <% if (event.price) { %><span class="stat-badge">💰 <%= helpers.h(event.price) %></span><% } %>
-                <% if (event.organizer) { %><span class="stat-badge">👤 <%= helpers.h(event.organizer) %></span><% } %>
+              <div class="attendance-list" style="margin-bottom: 1rem;">
+                <div class="attendance-header">
+                  <h3>Infos du concert</h3>
+                </div>
+                <div class="attendance-items">
+                  <div class="card-meta" style="margin-bottom: 0.75rem;">
+                    <span class="stat-badge">📅 <%= helpers.h(formatEventDate(event.date)) %></span>
+                    <% if (event.location) { %><span class="stat-badge">📍 <%= helpers.h(event.location) %></span><% } %>
+                    <% if (event.price) { %><span class="stat-badge">💰 <%= helpers.h(event.price) %></span><% } %>
+                    <% if (event.organizer) { %><span class="stat-badge">👤 <%= helpers.h(event.organizer) %></span><% } %>
+                  </div>
+                  <% if (event.description) { %>
+                    <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
+                  <% } %>
+                </div>
               </div>
-
-              <% if (event.description) { %>
-                <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
-              <% } %>
 
               <% if (event.setlist) { %>
                 <div class="attendance-list" style="margin-top: 1rem;">
-                  <div class="attendance-header"><h3>Setlist</h3></div>
+                  <div class="attendance-header"><h3>Playlist</h3></div>
                   <div class="attendance-items">
                     <div class="card-description"><%- helpers.markdownToHtml(event.setlist) %></div>
                   </div>

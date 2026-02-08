@@ -108,8 +108,24 @@
         const musicianId = button.getAttribute('data-musician-id') || '';
         const firstName = button.getAttribute('data-first-name') || '';
         const lastName = button.getAttribute('data-last-name') || '';
-        const statusId = button.getAttribute('data-status-id') || '';
-        const comment = button.getAttribute('data-comment') || '';
+        let statusId = button.getAttribute('data-status-id') || '';
+        let comment = button.getAttribute('data-comment') || '';
+        const responseMapRaw = button.getAttribute('data-response-map') || '';
+
+        if (!statusId || !comment) {
+          try {
+            const savedId = window.localStorage.getItem('lastMusicianId');
+            if (savedId && responseMapRaw) {
+              const map = JSON.parse(decodeURIComponent(responseMapRaw));
+              if (map && map[savedId]) {
+                statusId = String(map[savedId].statusId || '');
+                comment = map[savedId].comment || '';
+              }
+            }
+          } catch (e) {
+            // ignore parse errors
+          }
+        }
 
         if (title) {
           title.textContent = eventTitle ? `Répondre: ${eventTitle}` : "Répondre à l'événement";
@@ -297,10 +313,29 @@
         .split(',')
         .map((value) => value.trim())
         .filter((value) => value !== '');
+      const responseMapRaw = button.getAttribute('data-response-map') || '';
       const savedId = window.localStorage.getItem('lastMusicianId');
       const defaultLabel = button.getAttribute('data-default-label') || 'Répondre';
       if (savedId && responded.includes(savedId)) {
-        button.textContent = 'Déjà répondu';
+        let label = 'Déjà répondu';
+        try {
+          const map = responseMapRaw ? JSON.parse(decodeURIComponent(responseMapRaw)) : null;
+          if (map && map[savedId] && map[savedId].statusId) {
+            const statusId = String(map[savedId].statusId);
+            const radios = document.querySelectorAll('[data-presence-form] input[name=\"status_id\"]');
+            radios.forEach((radio) => {
+              if (radio.value === statusId) {
+                const statusLabel = (radio.parentElement && radio.parentElement.textContent || '').trim();
+                if (statusLabel) {
+                  label = `Déjà répondu (${statusLabel})`;
+                }
+              }
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+        button.textContent = label;
         button.classList.add('already-responded');
       } else {
         button.textContent = defaultLabel;
