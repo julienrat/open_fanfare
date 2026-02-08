@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS events (
   price TEXT,
   organizer TEXT,
   setlist TEXT,
+  event_status TEXT NOT NULL DEFAULT 'prise de contact',
   is_hidden INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),

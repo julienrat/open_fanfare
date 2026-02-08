@@ -245,6 +245,52 @@
   color: #15803d;
 }
 
+.stat-badge.status-badge {
+  text-transform: none;
+}
+
+.stat-badge.status-contact {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.35);
+  color: #c2410c;
+}
+
+.stat-badge.status-quote {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #1d4ed8;
+}
+
+.stat-badge.status-recruit {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #b45309;
+}
+
+.stat-badge.status-valid {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #15803d;
+}
+
+.stat-badge.status-canceled {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+
+.stat-badge.status-billed {
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.35);
+  color: #334155;
+}
+
+.stat-badge.status-neutral {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #475569;
+}
+
 .card-description {
   margin: 0;
   color: #475569;

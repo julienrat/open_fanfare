@@ -212,6 +212,7 @@
             setValue('price', button.getAttribute('data-event-price') || '');
             setValue('organizer', button.getAttribute('data-event-organizer') || '');
             setValue('setlist', button.getAttribute('data-event-setlist') || '');
+            setValue('event_status', button.getAttribute('data-event-status') || 'prise de contact');
             const hidden = button.getAttribute('data-event-hidden') || '';
             const hiddenInput = form.querySelector('[name="is_hidden"]');
             if (hiddenInput) {

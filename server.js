@@ -68,6 +68,13 @@ const normalizeHexColor = (color) => {
   return /^#([0-9a-fA-F]{3}){1,2}$/.test(c) ? c : null;
 };
 
+const normalizeEventStatus = (value) => {
+  const allowed = ['prise de contact', 'devis envoyé', 'en cours de recrutement fanfarons', 'validé', 'facturé', 'annulé'];
+  const normalized = String(value || '').trim().toLowerCase();
+  const match = allowed.find((v) => v === normalized);
+  return match || 'prise de contact';
+};
+
 const markdownToHtml = (text) => {
   if (!text) return '';
   const lines = String(text).split(/\r\n|\r|\n/);
@@ -248,7 +255,7 @@ const getStatuses = () => {
 
 const getEvents = () => {
   const events = db.prepare(`
-    SELECT id, title, description, date, location, price, organizer, setlist, is_hidden, created_at, updated_at
+    SELECT id, title, description, date, location, price, organizer, setlist, event_status, is_hidden, created_at, updated_at
     FROM events
     ORDER BY date ASC
   `).all();
@@ -294,6 +301,7 @@ const getEvents = () => {
       price: row.price,
       organizer: row.organizer,
       setlist: row.setlist,
+      eventStatus: row.event_status,
       isHidden: !!row.is_hidden,
       assignments: [],
       presences: [],
@@ -584,20 +592,21 @@ app.post(`${BASE_URL}/admin`, upload.none(), (req, res) => {
         const price = req.body.price || null;
         const organizer = req.body.organizer || null;
         const setlist = req.body.setlist || null;
+        const eventStatus = normalizeEventStatus(req.body.event_status || '');
         const isHidden = (req.body.is_hidden === '1' || req.body.is_hidden === 'on') ? 1 : 0;
         if (!title || !dateInput) break;
         const date = new Date(dateInput);
         const iso = isNaN(date.getTime()) ? dateInput : date.toISOString();
         if (id) {
-          db.prepare('UPDATE events SET title = ?, description = ?, date = ?, location = ?, price = ?, organizer = ?, setlist = ?, is_hidden = ?, updated_at = datetime(\'now\') WHERE id = ?')
-            .run(title, description, iso, location, price, organizer, setlist, isHidden, id);
+          db.prepare('UPDATE events SET title = ?, description = ?, date = ?, location = ?, price = ?, organizer = ?, setlist = ?, event_status = ?, is_hidden = ?, updated_at = datetime(\'now\') WHERE id = ?')
+            .run(title, description, iso, location, price, organizer, setlist, eventStatus, isHidden, id);
           db.prepare('DELETE FROM event_musicians WHERE event_id = ?').run(id);
           const musicianIds = db.prepare('SELECT id FROM musicians').all();
           const insert = db.prepare('INSERT INTO event_musicians (event_id, musician_id, is_required) VALUES (?, ?, 1)');
           musicianIds.forEach((m) => insert.run(id, m.id));
         } else {
-          const info = db.prepare('INSERT INTO events (title, description, date, location, price, organizer, setlist, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))')
-            .run(title, description, iso, location, price, organizer, setlist, isHidden);
+          const info = db.prepare('INSERT INTO events (title, description, date, location, price, organizer, setlist, event_status, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))')
+            .run(title, description, iso, location, price, organizer, setlist, eventStatus, isHidden);
           const eventId = info.lastInsertRowid;
           const musicianIds = db.prepare('SELECT id FROM musicians').all();
           const insert = db.prepare('INSERT INTO event_musicians (event_id, musician_id, is_required) VALUES (?, ?, 1)');
@@ -825,7 +834,7 @@ function importJson(data) {
     const insertSection = db.prepare('INSERT INTO sections (id, name, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?)');
     const insertInstrument = db.prepare('INSERT INTO instruments (id, name, color, section_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
     const insertMusician = db.prepare('INSERT INTO musicians (id, first_name, last_name, color, email, phone, instrument_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    const insertEvent = db.prepare('INSERT INTO events (id, title, description, date, location, price, organizer, setlist, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertEvent = db.prepare('INSERT INTO events (id, title, description, date, location, price, organizer, setlist, event_status, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const insertStatus = db.prepare('INSERT INTO attendance_statuses (id, label, color, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
     const insertAssignment = db.prepare('INSERT INTO event_musicians (id, event_id, musician_id, is_required, notes) VALUES (?, ?, ?, ?, ?)');
     const insertPresence = db.prepare('INSERT INTO presences (id, event_id, musician_id, status_id, comment, responded_at) VALUES (?, ?, ?, ?, ?, ?)');
@@ -872,6 +881,7 @@ function importJson(data) {
         decodeHtmlEntities(row.price || null),
         decodeHtmlEntities(row.organizer || null),
         decodeHtmlEntities(row.setlist || null),
+        normalizeEventStatus(row.event_status || row.eventStatus || 'prise de contact'),
         row.is_hidden ? 1 : 0,
         row.created_at || row.createdAt || new Date().toISOString(),
         row.updated_at || row.updatedAt || new Date().toISOString()

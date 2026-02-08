@@ -56,6 +56,7 @@ const musiciansList = musicians || [];
                   data-event-price="<%= helpers.h(event.price || '') %>"
                   data-event-organizer="<%= helpers.h(event.organizer || '') %>"
                   data-event-setlist="<%= helpers.h(event.setlist || '') %>"
+                  data-event-status="<%= helpers.h(event.eventStatus || event.event_status || 'en cours') %>"
                   data-event-hidden="<%= event.isHidden ? '1' : '' %>"
                   data-expand-group="events">
                 <td>
@@ -302,6 +303,17 @@ const musiciansList = musicians || [];
           <label class="form-field"><span>Tarif</span><input name="price" placeholder="Participation libre, 10€..." /></label>
           <label class="form-field"><span>Organisateur</span><input name="organizer" placeholder="Association, mairie..." /></label>
         </div>
+        <label class="form-field">
+          <span>Etat</span>
+          <select name="event_status">
+            <option value="prise de contact">Prise de contact</option>
+            <option value="devis envoyé">Devis envoyé</option>
+            <option value="en cours de recrutement fanfarons">En cours de recrutement fanfarons</option>
+            <option value="validé">Validé</option>
+            <option value="facturé">Facturé</option>
+            <option value="annulé">Annulé</option>
+          </select>
+        </label>
         <label class="form-field"><span>Description</span><textarea name="description" rows="3" placeholder="Détails du concert, programme..."></textarea></label>
         <p class="muted-text">Markdown accepté : **gras**, *italique*, [lien](https://...), # Titre, - liste.</p>
         <label class="form-field"><span>Setlist (liste des morceaux)</span><textarea name="setlist" rows="5" placeholder="Ex: # Acte 1&#10;- Oh When the Saints&#10;- La Bamba&#10;[Lien](https://...)"></textarea></label>

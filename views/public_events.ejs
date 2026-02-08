@@ -102,6 +102,17 @@ const activePath = path || '/';
                 <p class="card-location">📍 <%= helpers.h(event.location) %></p>
               <% } %>
               <div class="card-meta">
+                <% const statusLabel = event.eventStatus || event.event_status || 'prise de contact'; %>
+                <% const statusKey = String(statusLabel).toLowerCase(); %>
+                <% const statusClass = (
+                  statusKey === 'prise de contact' ? 'status-contact' :
+                  statusKey === 'devis envoyé' ? 'status-quote' :
+                  statusKey === 'en cours de recrutement fanfarons' ? 'status-recruit' :
+                  statusKey === 'validé' ? 'status-valid' :
+                  statusKey === 'annulé' ? 'status-canceled' :
+                  statusKey === 'facturé' ? 'status-billed' : 'status-neutral'
+                ); %>
+                <span class="stat-badge status-badge <%= statusClass %>"><%= helpers.h(statusLabel) %></span>
                 <span class="stat-badge">Présents: <%= presentPresences.length %></span>
                 <span class="stat-badge">Réponses: <%= totalResponses %></span>
                 <span class="stat-badge participation-rate"><%= participationRate %>%</span>

@@ -18,5 +18,8 @@ const eventCols = db.prepare("PRAGMA table_info(events)").all().map((c) => c.nam
 if (!eventCols.includes('is_hidden')) {
   db.exec("ALTER TABLE events ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0");
 }
+if (!eventCols.includes('event_status')) {
+  db.exec("ALTER TABLE events ADD COLUMN event_status TEXT NOT NULL DEFAULT 'en cours'");
+}
 
 export default db;
