@@ -163,7 +163,7 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
               <% if (agendaComments.length) { const agendaCommentsModalId = `agenda-comments-${stat.event.id}`; %>
                 <button type="button" class="ghost-button" data-open-modal="<%= helpers.h(agendaCommentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
               <% } %>
-              <a class="ghost-button" href="<%= helpers.baseUrl('/ical/event/' + stat.event.id) %>" title="Importer dans mon agenda">📅 Importer dans mon agenda</a>
+              <a class="ghost-button" href="<%= helpers.baseUrl('/ical/event/' + stat.event.id) %>" title="Exporter">📅 Exporter</a>
             </div>
             <% if (stat.event.description) { %>
               <div class="card-description"><%- helpers.markdownToHtml(stat.event.description) %></div>

@@ -175,8 +175,8 @@ sortedEvents.forEach((event) => {
     <div class="modal">
       <div class="modal-header">
         <h2><%= helpers.h(event.title) %></h2>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <a class="ghost-button small" href="<%= helpers.baseUrl('/ical/event/' + event.id) %>" title="Importer dans mon agenda">📅 Importer dans mon agenda</a>
+        <div class="modal-actions" style="display:flex;align-items:center;gap:0.5rem;">
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/ical/event/' + event.id) %>" title="Exporter">📅 Exporter</a>
           <button class="icon-button" data-close-modal="<%= helpers.h(eventModalId) %>" aria-label="Fermer">×</button>
         </div>
       </div>
