@@ -19,15 +19,31 @@ app.set('views', path.join(process.cwd(), 'views'));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(`${BASE_URL}/assets`, express.static(path.join(process.cwd(), 'public', 'assets')));
+
+// Support reverse proxy sub-paths (e.g., /sondages) via X-Forwarded-Prefix.
+app.use((req, _res, next) => {
+  const forwardedPrefix = req.headers['x-forwarded-prefix'];
+  if (!BASE_URL && forwardedPrefix && req.url.startsWith(forwardedPrefix)) {
+    req.url = req.url.slice(forwardedPrefix.length) || '/';
+  }
+  req.baseUrlPrefix = BASE_URL || forwardedPrefix || '';
+  next();
+});
+
+const staticAssets = express.static(path.join(process.cwd(), 'public', 'assets'));
+app.use('/assets', staticAssets);
+if (BASE_URL) {
+  app.use(`${BASE_URL}/assets`, staticAssets);
+}
 
 // Helpers
 const h = (v) => (v == null ? '' : String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
 
-const baseUrl = (p = '') => {
-  if (!p) return BASE_URL;
+const baseUrl = (p = '', req = null) => {
+  const prefix = (req && req.baseUrlPrefix) ? String(req.baseUrlPrefix) : BASE_URL;
+  if (!p) return prefix;
   if (!p.startsWith('/')) p = '/' + p;
-  return BASE_URL + p;
+  return prefix + p;
 };
 
 const formatDatetimeLocal = (iso) => {
@@ -363,10 +379,11 @@ const generateIcal = (events) => {
 };
 
 const renderPage = (res, view, data, req) => {
+  const baseUrlForReq = (p = '') => baseUrl(p, req);
   res.render(view, {
     ...data,
     request: req,
-    helpers: { h, baseUrl, formatDatetimeLocal, formatDateFr, markdownToHtml, raw, escapeHtml },
+    helpers: { h, baseUrl: baseUrlForReq, formatDatetimeLocal, formatDateFr, markdownToHtml, raw, escapeHtml },
   });
 };
 
