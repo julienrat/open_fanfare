@@ -1,0 +1,91 @@
+<%
+const activePath = path || '/stats';
+const sortedEvents = (events || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
+const sortedInstruments = (instruments || []).slice().sort((a, b) => {
+  const sectionA = a.section ? a.section.name : 'ZZZ';
+  const sectionB = b.section ? b.section.name : 'ZZZ';
+  if (sectionA === sectionB) return a.name.localeCompare(b.name);
+  return sectionA.localeCompare(sectionB);
+});
+const stats = {};
+sortedInstruments.forEach((inst) => { stats[inst.id] = {}; });
+
+sortedEvents.forEach((event) => {
+  let defaultStatus = null;
+  (event.presences || []).forEach((p) => { if (p.status && p.status.isDefault) defaultStatus = p.status; });
+  const presentPresences = defaultStatus ? (event.presences || []).filter((p) => p.statusId === defaultStatus.id) : (event.presences || []);
+  presentPresences.forEach((p) => {
+    const instrumentId = p.musician.instrument.id;
+    stats[instrumentId][event.id] = (stats[instrumentId][event.id] || 0) + 1;
+  });
+});
+
+const columnTotals = {};
+sortedEvents.forEach((event) => {
+  let sum = 0;
+  Object.values(stats).forEach((s) => { sum += s[event.id] || 0; });
+  columnTotals[event.id] = sum;
+});
+%>
+<%- include('partials/header', { helpers, activePath }) %>
+
+<div class="page">
+  <h1 class="page-title">Statistiques par instrument</h1>
+  <p class="page-subtitle">Nombre de musiciens présents par instrument et par concert</p>
+
+  <% if (!sortedEvents.length) { %>
+    <p class="page-subtitle">Aucun concert pour le moment.</p>
+  <% } else { %>
+    <div class="stats-table-wrapper">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th class="sticky-col">Instrument</th>
+            <% sortedEvents.forEach((event) => { %>
+              <th>
+                <div class="stats-header">
+                  <div class="stats-event-title"><%= helpers.h(event.title) %></div>
+                  <div class="stats-event-date"><%= helpers.h(helpers.formatDateFr(event.date, false)) %></div>
+                </div>
+              </th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody>
+          <% sortedInstruments.forEach((instrument) => { 
+               let rowTotal = 0;
+               sortedEvents.forEach((event) => { rowTotal += stats[instrument.id][event.id] || 0; });
+               if (rowTotal === 0) return;
+          %>
+            <tr>
+              <td class="sticky-col">
+                <div class="instrument-name">
+                  <span class="color-dot" style="background-color: <%= helpers.h((instrument.section && instrument.section.color) ? instrument.section.color : '#94a3b8') %>"></span>
+                  <span class="instrument-text">
+                    <%= helpers.h(instrument.name) %>
+                    <% if (instrument.section) { %>
+                      <span class="section-label">(<%= helpers.h(instrument.section.name) %>)</span>
+                    <% } %>
+                  </span>
+                </div>
+              </td>
+              <% sortedEvents.forEach((event) => { const count = stats[instrument.id][event.id] || 0; %>
+                <td class="stats-cell"><%= count > 0 ? count : '-' %></td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="sticky-col total-row">Total</td>
+            <% sortedEvents.forEach((event) => { %>
+              <td class="total-row"><%= columnTotals[event.id] || 0 %></td>
+            <% }) %>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer', { helpers }) %>

@@ -1,0 +1,402 @@
+<%
+const activePath = path || '/admin';
+const sortedEvents = (events || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+const sectionsList = sections || [];
+const instrumentsList = instruments || [];
+const musiciansList = musicians || [];
+%>
+<%- include('partials/header', { helpers, activePath }) %>
+
+<div class="page admin-page">
+  <div class="admin-header-wrapper">
+    <div>
+      <h1 class="page-title">Administration</h1>
+      <p class="page-subtitle">Gérez les pupitres, instruments, musiciens et concerts de la fanfare.</p>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <article class="admin-card full-width">
+      <header class="admin-card-header">
+        <div>
+          <h2>Concerts</h2>
+          <p class="muted-text"><%= sortedEvents.length %> concert(s)</p>
+        </div>
+        <div class="action-group">
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/admin/export') %>" title="Exporter toutes les données en JSON">⬇️ Export JSON</a>
+          <form method="post" action="<%= helpers.baseUrl('/admin/import') %>" enctype="multipart/form-data" class="inline-form">
+            <label class="ghost-button small inline-file">
+              ⬆️ Import JSON
+              <input type="file" name="json_file" accept="application/json" class="inline-file-input" onchange="this.form.submit()" />
+            </label>
+          </form>
+          <form method="post" action="<%= helpers.baseUrl('/admin/clear') %>" class="inline-form">
+            <button type="submit" class="ghost-button small delete-button" data-confirm="Supprimer toutes les données ?">🧹 Vider la base</button>
+          </form>
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/admin/export/events') %>" title="Exporter les concerts en CSV">⬇️ CSV</a>
+          <button type="button" class="ghost-button small" data-open-modal="event-import" title="Importer des concerts en CSV">⬆️ CSV</button>
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/ical') %>" title="Exporter tous les concerts au format iCal">📅 iCal</a>
+          <button type="button" class="add-button" data-open-modal="event" title="Ajouter un concert">+</button>
+        </div>
+      </header>
+      <div class="events-table-wrapper">
+        <table class="events-table">
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Date</th>
+              <th>Lieu</th>
+              <th>Participants</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% sortedEvents.forEach((event, index) => { %>
+              <tr class="event-row <%= index >= 3 ? 'is-hidden' : '' %>"
+                  data-open-modal="event"
+                  data-event-id="<%= event.id %>"
+                  data-event-title="<%= helpers.h(event.title) %>"
+                  data-event-description="<%= helpers.h(event.description || '') %>"
+                  data-event-date="<%= helpers.h(helpers.formatDatetimeLocal(event.date)) %>"
+                  data-event-location="<%= helpers.h(event.location || '') %>"
+                  data-event-price="<%= helpers.h(event.price || '') %>"
+                  data-event-organizer="<%= helpers.h(event.organizer || '') %>"
+                  data-event-setlist="<%= helpers.h(event.setlist || '') %>"
+                  data-expand-group="events">
+                <td>
+                  <div class="event-title-cell">
+                    <strong><%= helpers.h(event.title) %></strong>
+                    <% if (event.description) { %>
+                      <span class="event-description-preview"><%= helpers.h(event.description) %></span>
+                    <% } %>
+                  </div>
+                </td>
+                <td>
+                  <div class="event-date-cell"><%= helpers.h(helpers.formatDateFr(event.date)) %></div>
+                </td>
+                <td>
+                  <div class="event-meta-cell">
+                    <% if (event.location) { %><span>📍 <%= helpers.h(event.location) %></span><% } %>
+                    <% if (event.price) { %><span>💰 <%= helpers.h(event.price) %></span><% } %>
+                    <% if (event.organizer) { %><span>👤 <%= helpers.h(event.organizer) %></span><% } %>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge"><%= (event.assignments || []).length %> musiciens</span>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (sortedEvents.length === 0) { %>
+              <tr>
+                <td colspan="4" style="text-align:center;padding:2rem;color:#94a3b8;">Aucun concert. Cliquez sur + pour créer un concert.</td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-actions" style="margin-top:1rem;">
+        <button type="button" class="ghost-button" data-expand-button="events" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+      </div>
+    </article>
+
+    <article class="admin-card">
+      <header class="admin-card-header">
+        <div>
+          <h2>Pupitres</h2>
+          <p class="muted-text"><%= sectionsList.length %> pupitre(s)</p>
+        </div>
+        <div class="action-group">
+          <button type="button" class="add-button" data-open-modal="section" title="Ajouter un pupitre">+</button>
+        </div>
+      </header>
+      <ul id="sections-list" class="items-list">
+        <% sectionsList.forEach((section, index) => { %>
+          <li class="<%= index >= 3 ? 'is-hidden' : '' %>" data-expand-group="sections">
+            <button type="button" class="item-card"
+              data-open-modal="section"
+              data-section-id="<%= section.id %>"
+              data-section-name="<%= helpers.h(section.name) %>"
+              data-section-color="<%= helpers.h(section.color || '') %>">
+              <span class="color-dot" style="background-color:<%= helpers.h(section.color || '#c4b5fd') %>" aria-hidden></span>
+              <strong><%= helpers.h(section.name) %></strong>
+            </button>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="form-actions" style="margin-top:1rem;">
+        <button type="button" class="ghost-button" data-expand-button="sections" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+      </div>
+    </article>
+
+    <article class="admin-card">
+      <header class="admin-card-header">
+        <div>
+          <h2>Instruments</h2>
+          <p class="muted-text"><%= instrumentsList.length %> instrument(s)</p>
+        </div>
+        <div class="action-group">
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/admin/export/instruments') %>" title="Exporter les instruments en CSV">⬇️ CSV</a>
+          <button type="button" class="ghost-button small" data-open-modal="instrument-import" title="Importer des instruments">⬆️ CSV</button>
+          <button type="button" class="add-button" data-open-modal="instrument" title="Ajouter un instrument">+</button>
+        </div>
+      </header>
+      <ul id="instruments-list" class="items-list">
+        <% instrumentsList.forEach((instrument, index) => { %>
+          <li class="<%= index >= 3 ? 'is-hidden' : '' %>" data-expand-group="instruments">
+            <button type="button" class="item-card"
+              data-open-modal="instrument"
+              data-instrument-id="<%= instrument.id %>"
+              data-instrument-name="<%= helpers.h(instrument.name) %>"
+              data-instrument-color="<%= helpers.h(instrument.color || '') %>"
+              data-instrument-section-id="<%= helpers.h(instrument.sectionId || '') %>">
+              <span class="color-dot" style="background-color:<%= helpers.h(instrument.color || '#c4b5fd') %>" aria-hidden></span>
+              <strong><%= helpers.h(instrument.name) %></strong>
+              <% if (instrument.section) { %>
+                <span class="chip"><%= helpers.h(instrument.section.name) %></span>
+              <% } %>
+            </button>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="form-actions" style="margin-top:1rem;">
+        <button type="button" class="ghost-button" data-expand-button="instruments" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+      </div>
+    </article>
+
+    <article class="admin-card">
+      <header class="admin-card-header">
+        <div>
+          <h2>Musiciens</h2>
+          <p class="muted-text"><%= musiciansList.length %> musicien(s)</p>
+        </div>
+        <div class="action-group">
+          <a class="ghost-button small" href="<%= helpers.baseUrl('/admin/export/musicians') %>" title="Exporter les musiciens en CSV">⬇️ CSV</a>
+          <button type="button" class="ghost-button small" data-open-modal="import" title="Importer depuis CSV">⬆️ CSV</button>
+          <button type="button" class="add-button" data-open-modal="musician" title="Ajouter un musicien">+</button>
+        </div>
+      </header>
+      <ul id="musicians-list" class="items-list">
+        <% musiciansList.forEach((musician, index) => { %>
+          <li class="<%= index >= 3 ? 'is-hidden' : '' %>" data-expand-group="musicians">
+            <button type="button" class="item-card"
+              data-open-modal="musician"
+              data-musician-id="<%= musician.id %>"
+              data-musician-first-name="<%= helpers.h(musician.firstName) %>"
+              data-musician-last-name="<%= helpers.h(musician.lastName) %>"
+              data-musician-instrument-id="<%= musician.instrumentId %>"
+              data-musician-color="<%= helpers.h(musician.color || '') %>"
+              data-musician-email="<%= helpers.h(musician.email || '') %>"
+              data-musician-phone="<%= helpers.h(musician.phone || '') %>">
+              <strong><%= helpers.h(musician.firstName + ' ' + musician.lastName) %></strong>
+              <span class="chip"><%= helpers.h(musician.instrument.name) %></span>
+            </button>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="form-actions" style="margin-top:1rem;">
+        <button type="button" class="ghost-button" data-expand-button="musicians" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+      </div>
+    </article>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-backdrop is-hidden" data-modal="section">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 data-modal-title>Nouveau pupitre</h2>
+      <button class="icon-button" data-close-modal="section" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin') %>" class="form" data-admin-form="section">
+        <input type="hidden" name="id" value="" />
+        <label class="form-field"><span>Nom</span><input name="name" required /></label>
+        <label class="form-field"><span>Couleur (hex)</span><input name="color" placeholder="#f97316" /></label>
+        <div class="form-actions">
+          <button type="submit" name="action" value="section_save" class="primary-button">Enregistrer</button>
+          <button type="button" class="ghost-button" data-close-modal="section">Annuler</button>
+          <button type="submit" name="action" value="section_delete" class="ghost-button delete-button" data-delete-button>Supprimer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="instrument">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 data-modal-title>Nouvel instrument</h2>
+      <button class="icon-button" data-close-modal="instrument" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin') %>" class="form" data-admin-form="instrument">
+        <input type="hidden" name="id" value="" />
+        <label class="form-field"><span>Nom</span><input name="name" required /></label>
+        <label class="form-field">
+          <span>Pupitre</span>
+          <select name="section_id">
+            <option value="">Sans pupitre</option>
+            <% sectionsList.forEach((section) => { %>
+              <option value="<%= section.id %>"><%= helpers.h(section.name) %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="form-field"><span>Couleur (hex)</span><input name="color" placeholder="#f97316" /></label>
+        <div class="form-actions">
+          <button type="submit" name="action" value="instrument_save" class="primary-button">Enregistrer</button>
+          <button type="button" class="ghost-button" data-close-modal="instrument">Annuler</button>
+          <button type="submit" name="action" value="instrument_delete" class="ghost-button delete-button" data-delete-button>Supprimer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="musician">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 data-modal-title>Nouveau musicien</h2>
+      <button class="icon-button" data-close-modal="musician" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin') %>" class="form" data-admin-form="musician">
+        <input type="hidden" name="id" value="" />
+        <div class="form-grid">
+          <label class="form-field"><span>Prénom</span><input name="first_name" required /></label>
+          <label class="form-field"><span>Nom</span><input name="last_name" required /></label>
+        </div>
+        <label class="form-field">
+          <span>Instrument</span>
+          <select name="instrument_id" required>
+            <option value="">Choisir…</option>
+            <% instrumentsList.forEach((instrument) => { %>
+              <option value="<%= instrument.id %>"><%= helpers.h(instrument.name) %></option>
+            <% }) %>
+          </select>
+        </label>
+        <div class="form-grid">
+          <label class="form-field"><span>Email</span><input type="email" name="email" placeholder="alice@example.com" /></label>
+          <label class="form-field"><span>Téléphone</span><input name="phone" placeholder="+33600000000" /></label>
+        </div>
+        <label class="form-field"><span>Couleur (hex)</span><input name="color" placeholder="#f97316" /></label>
+        <div class="form-actions">
+          <button type="submit" name="action" value="musician_save" class="primary-button">Enregistrer</button>
+          <button type="button" class="ghost-button" data-close-modal="musician">Annuler</button>
+          <button type="submit" name="action" value="musician_delete" class="ghost-button delete-button" data-delete-button>Supprimer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="event">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 data-modal-title>Modifier le concert</h2>
+      <button class="icon-button" data-close-modal="event" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin') %>" class="form" data-admin-form="event">
+        <input type="hidden" name="id" value="" />
+        <label class="form-field"><span>Titre</span><input name="title" required /></label>
+        <div class="form-grid">
+          <label class="form-field"><span>Date et heure</span><input type="datetime-local" name="date" required /></label>
+          <label class="form-field"><span>Lieu</span><input name="location" placeholder="Place de la République" /></label>
+        </div>
+        <div class="form-grid">
+          <label class="form-field"><span>Tarif</span><input name="price" placeholder="Participation libre, 10€..." /></label>
+          <label class="form-field"><span>Organisateur</span><input name="organizer" placeholder="Association, mairie..." /></label>
+        </div>
+        <label class="form-field"><span>Description</span><textarea name="description" rows="3" placeholder="Détails du concert, programme..."></textarea></label>
+        <p class="muted-text">Markdown accepté : **gras**, *italique*, [lien](https://...), # Titre, - liste.</p>
+        <label class="form-field"><span>Setlist (liste des morceaux)</span><textarea name="setlist" rows="5" placeholder="Ex: # Acte 1&#10;- Oh When the Saints&#10;- La Bamba&#10;[Lien](https://...)"></textarea></label>
+        <p class="muted-text">Markdown accepté pour la setlist (titres, listes, liens).</p>
+        <p class="muted-text">Tous les musiciens disponibles seront automatiquement ajoutés à cet événement.</p>
+        <div class="form-actions">
+          <button type="submit" name="action" value="event_save" class="primary-button">Enregistrer</button>
+          <button type="button" class="ghost-button" data-close-modal="event">Annuler</button>
+          <button type="submit" name="action" value="event_delete" class="ghost-button delete-button" data-delete-button>Supprimer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="import">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Importer des musiciens</h2>
+      <button class="icon-button" data-close-modal="import" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin/import/musicians') %>" enctype="multipart/form-data" class="form">
+        <div class="import-block">
+          <p class="import-help">Format attendu : <code>nom;prenom;instrument;mail;telephone</code> avec une première ligne d'en-tête.</p>
+          <div class="import-actions">
+            <label class="import-upload">
+              <input type="file" name="csv_file" accept=".csv,text/csv" required />
+              <span>Choisir un fichier CSV</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Importer</button>
+          <button type="button" class="ghost-button" data-close-modal="import">Fermer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="instrument-import">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Importer des instruments</h2>
+      <button class="icon-button" data-close-modal="instrument-import" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin/import/instruments') %>" enctype="multipart/form-data" class="form">
+        <div class="import-block">
+          <p class="import-help">Format attendu : <code>nom;couleur;section</code> avec une première ligne d'en-tête.</p>
+          <div class="import-actions">
+            <label class="import-upload">
+              <input type="file" name="instrument_csv" accept=".csv,text/csv" required />
+              <span>Choisir un fichier CSV</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Importer</button>
+          <button type="button" class="ghost-button" data-close-modal="instrument-import">Fermer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="event-import">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Importer des concerts</h2>
+      <button class="icon-button" data-close-modal="event-import" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/admin/import/events') %>" enctype="multipart/form-data" class="form">
+        <div class="import-block">
+          <p class="import-help">Format attendu : <code>titre;description;date;lieu;tarif;organisateur;setlist</code> avec une première ligne d'en-tête.</p>
+          <div class="import-actions">
+            <label class="import-upload">
+              <input type="file" name="event_csv" accept=".csv,text/csv" required />
+              <span>Choisir un fichier CSV</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Importer</button>
+          <button type="button" class="ghost-button" data-close-modal="event-import">Fermer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { helpers }) %>

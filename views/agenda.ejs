@@ -1,0 +1,176 @@
+<%
+const activePath = path || '/agenda';
+const eventsList = events || [];
+const statusesList = statuses || [];
+const monthParam = (request && request.query && request.query.month) || null;
+const yearParam = (request && request.query && request.query.year) || null;
+const today = new Date();
+let monthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+if (monthParam && yearParam) {
+  const m = Number(monthParam) - 1;
+  const y = Number(yearParam);
+  if (!Number.isNaN(m) && !Number.isNaN(y)) monthDate = new Date(y, m, 1);
+}
+const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+const formatMonthName = (date) => {
+  const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
+};
+const formatEventTime = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+};
+const formatDayTitle = (dayKey) => {
+  const d = new Date(dayKey);
+  if (Number.isNaN(d.getTime())) return dayKey;
+  const days = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  const months = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+};
+const computeEventStats = (event) => {
+  const totalAssignments = (event.assignments || []).length;
+  const totalResponses = (event.presences || []).length;
+  const responsePercentage = totalAssignments > 0 ? Math.round((totalResponses / totalAssignments) * 100) : 0;
+  const responsesByStatus = {};
+  statusesList.forEach((s) => { responsesByStatus[s.label] = 0; });
+  (event.presences || []).forEach((p) => {
+    const label = p.status.label;
+    responsesByStatus[label] = (responsesByStatus[label] || 0) + 1;
+  });
+  const defaultStatus = statusesList.find((s) => s.isDefault) || null;
+  const presentPresences = defaultStatus ? (event.presences || []).filter((p) => p.statusId === defaultStatus.id) : (event.presences || []);
+  const instrumentsMap = new Map();
+  presentPresences.forEach((p) => {
+    const inst = p.musician.instrument;
+    if (!instrumentsMap.has(inst.id)) instrumentsMap.set(inst.id, { name: inst.name, count: 0, color: inst.color });
+    instrumentsMap.get(inst.id).count += 1;
+  });
+  return {
+    event,
+    totalAssignments,
+    totalResponses,
+    presentCount: presentPresences.length,
+    responsePercentage,
+    responsesByStatus,
+    instrumentsStats: Array.from(instrumentsMap.values()),
+  };
+};
+const eventStats = eventsList.map(computeEventStats);
+const eventsByDay = {};
+for (const stat of eventStats) {
+  const d = new Date(stat.event.date);
+  const key = d.toISOString().slice(0,10);
+  eventsByDay[key] = eventsByDay[key] || [];
+  eventsByDay[key].push(stat);
+}
+const prevMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1);
+const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+%>
+<%- include('partials/header', { helpers, activePath }) %>
+
+<div class="page">
+  <div class="agenda-header-wrapper">
+    <div>
+      <h1 class="page-title">Agenda des concerts</h1>
+      <p class="page-subtitle">Consultez le calendrier des concerts et les statistiques d'instruments.</p>
+    </div>
+    <a class="primary-button" href="<%= helpers.baseUrl('/ical') %>" title="Exporter l'agenda au format iCal">📅 Exporter dans mon agenda</a>
+  </div>
+
+  <div class="agenda-layout">
+    <div class="calendar-section">
+      <div class="calendar-card">
+        <div class="calendar-header">
+          <a class="month-nav-button" href="<%= helpers.baseUrl('/agenda') %>?month=<%= prevMonth.getMonth()+1 %>&year=<%= prevMonth.getFullYear() %>">←</a>
+          <h2 class="current-month"><%= helpers.h(formatMonthName(monthStart)) %></h2>
+          <a class="month-nav-button" href="<%= helpers.baseUrl('/agenda') %>?month=<%= nextMonth.getMonth()+1 %>&year=<%= nextMonth.getFullYear() %>">→</a>
+        </div>
+
+        <div class="calendar-weekdays">
+          <% weekDays.forEach((day) => { %>
+            <div class="weekday"><%= helpers.h(day) %></div>
+          <% }) %>
+        </div>
+
+        <div class="calendar-grid">
+          <%
+            const startOfGrid = new Date(monthStart);
+            const weekDayIndex = (startOfGrid.getDay() + 6) % 7; // monday=0
+            startOfGrid.setDate(startOfGrid.getDate() - weekDayIndex);
+            const endOfGrid = new Date(monthEnd);
+            const weekDayIndexEnd = (endOfGrid.getDay() + 6) % 7;
+            endOfGrid.setDate(endOfGrid.getDate() + (6 - weekDayIndexEnd));
+            for (let current = new Date(startOfGrid); current <= endOfGrid; current.setDate(current.getDate() + 1)) {
+              const dayKey = current.toISOString().slice(0,10);
+              const isCurrentMonth = current.getMonth() === monthStart.getMonth();
+              const hasEvents = !!eventsByDay[dayKey];
+              const modalId = hasEvents ? `agenda-day-${dayKey}` : '';
+          %>
+            <button type="button" class="calendar-day <%= !isCurrentMonth ? 'inactive' : '' %> <%= hasEvents ? 'has-events' : '' %>" <%= hasEvents ? `data-open-modal="${modalId}"` : '' %> <%= (!isCurrentMonth && !hasEvents) ? 'disabled' : '' %>>
+              <span class="day-number"><%= current.getDate() %></span>
+              <% if (hasEvents) { %>
+                <div class="day-events">
+                  <% eventsByDay[dayKey].forEach((stat) => { %>
+                    <span class="event-chip"><%= helpers.h(stat.event.title) %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+            </button>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% Object.keys(eventsByDay).forEach((dayKey) => { const stats = eventsByDay[dayKey]; const modalId = `agenda-day-${dayKey}`; %>
+  <div class="modal-backdrop is-hidden" data-modal="<%= modalId %>">
+    <div class="modal">
+      <div class="modal-header">
+        <h2><%= helpers.h(formatDayTitle(dayKey)) %></h2>
+        <button class="icon-button" data-close-modal="<%= modalId %>" aria-label="Fermer">×</button>
+      </div>
+      <div class="modal-body">
+        <% stats.forEach((stat) => { %>
+          <div class="event-detail">
+            <div class="event-detail-header">
+              <h3><%= helpers.h(stat.event.title) %></h3>
+              <div class="event-detail-meta">
+                <span>⏰ <%= helpers.h(formatDayTitle(dayKey)) %> - <%= helpers.h(formatEventTime(stat.event.date)) %></span>
+                <% if (stat.event.location) { %><span>📍 <%= helpers.h(stat.event.location) %></span><% } %>
+              </div>
+            </div>
+            <div class="event-stats-row">
+              <div class="stat-box"><span class="stat-label">Présents</span><span class="stat-value"><%= stat.presentCount %></span></div>
+              <div class="stat-box"><span class="stat-label">Réponses</span><span class="stat-value"><%= stat.totalResponses %></span></div>
+              <div class="stat-box"><span class="stat-label">Taux</span><span class="stat-value" style="color: <%= stat.responsePercentage >= 80 ? '#22c55e' : stat.responsePercentage >= 60 ? '#eab308' : stat.responsePercentage >= 40 ? '#f97316' : '#ef4444' %>"><%= stat.responsePercentage %>%</span></div>
+            </div>
+            <% if (stat.instrumentsStats.length) { %>
+              <div class="instruments-section">
+                <h4>Répartition par instrument</h4>
+                <div class="instruments-chart">
+                  <div class="chart-canvas-wrapper">
+                    <canvas class="chart-canvas" data-chart='<%= JSON.stringify(stat.instrumentsStats).replace(/'/g, "&apos;") %>'></canvas>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+            <div class="response-breakdown">
+              <p class="breakdown-title">Détail des réponses :</p>
+              <div class="breakdown-items">
+                <% Object.keys(stat.responsesByStatus).forEach((label) => { %>
+                  <span class="breakdown-item"><%= helpers.h(label) %>: <strong><%= stat.responsesByStatus[label] %></strong></span>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<%- include('partials/footer', { helpers }) %>

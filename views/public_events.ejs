@@ -1,0 +1,300 @@
+<%
+const eventsList = events || [];
+const statusesList = statuses || [];
+const musiciansList = musicians || [];
+let defaultStatus = null;
+statusesList.forEach((status) => {
+  if (status.isDefault) defaultStatus = status;
+});
+const normalizeStatusLabel = (label) => (label || '').toLowerCase().replace('é', 'e').replace('è', 'e').replace('ê', 'e').replace('â', 'a').replace('à', 'a').replace('î', 'i').replace('ï', 'i').replace('ô', 'o').replace('ö', 'o').replace('û', 'u').replace('ù', 'u').replace('ç', 'c');
+const uniqueStatusesMap = new Map();
+statusesList.forEach((status) => {
+  const key = normalizeStatusLabel(status.label);
+  if (!uniqueStatusesMap.has(key) || status.isDefault) uniqueStatusesMap.set(key, status);
+});
+const uniqueStatuses = Array.from(uniqueStatusesMap.values());
+const formatEventDate = (iso) => helpers.formatDateFr(iso);
+const computeParticipationData = (event, defaultStatus) => {
+  const counts = new Map();
+  const defaultId = defaultStatus ? defaultStatus.id : null;
+  const presences = event.presences || [];
+  const presentPresences = defaultId ? presences.filter((p) => p.statusId === defaultId) : presences;
+  if (!presentPresences.length) return [];
+  presentPresences.forEach((p) => {
+    const instrument = p.musician.instrument;
+    if (!counts.has(instrument.id)) counts.set(instrument.id, { name: instrument.name, value: 0, color: instrument.color });
+    counts.get(instrument.id).value += 1;
+  });
+  return Array.from(counts.values());
+};
+const computeMissingData = (event, defaultStatus) => {
+  const counts = new Map();
+  const defaultId = defaultStatus ? defaultStatus.id : null;
+  const presences = event.presences || [];
+  const assignments = event.assignments || [];
+  const presentIds = new Set();
+  presences.forEach((p) => {
+    if (!defaultId || p.statusId === defaultId) presentIds.add(p.musicianId);
+  });
+  assignments.forEach((a) => {
+    if (presentIds.has(a.musicianId)) return;
+    const instrument = a.musician.instrument;
+    if (!counts.has(instrument.id)) counts.set(instrument.id, { name: instrument.name, value: 0, color: instrument.color });
+    counts.get(instrument.id).value += 1;
+  });
+  return Array.from(counts.values());
+};
+const activePath = path || '/';
+%>
+<%- include('partials/header', { helpers, activePath }) %>
+
+<div class="page">
+  <h1 class="page-title" data-presences-title>Présences aux concerts</h1>
+  <p class="page-subtitle">
+    Consultez les concerts à venir, confirmez votre présence et visualisez la participation par instrument.
+  </p>
+
+  <% if (!eventsList.length) { %>
+    <p>Aucun événement pour le moment. Revenez bientôt !</p>
+  <% } else { %>
+    <div class="cards-grid">
+      <% eventsList.forEach((event) => { %>
+        <%
+          const assignments = event.assignments || [];
+          const presences = event.presences || [];
+          const totalAssignments = assignments.length;
+          const totalResponses = presences.length;
+          const participationRate = totalAssignments > 0 ? Math.round((totalResponses / totalAssignments) * 100) : 0;
+          const participationData = computeParticipationData(event, defaultStatus);
+          const missingData = computeMissingData(event, defaultStatus);
+          const detailModalId = `event-detail-${event.id}`;
+          let presentPresences = [];
+          if (defaultStatus) {
+            presentPresences = presences.filter((p) => p.statusId === defaultStatus.id);
+          } else {
+            presentPresences = presences;
+          }
+          const respondedIds = Array.from(new Set(presences.map((p) => p.musicianId)));
+          const respondedAttr = respondedIds.join(',');
+        %>
+        <article class="card clickable" data-open-modal="<%= detailModalId %>">
+          <header class="card-header">
+            <div class="card-header-content">
+              <h2><%= helpers.h(event.title) %></h2>
+              <p class="card-date"><%= helpers.h(formatEventDate(event.date)) %></p>
+              <% if (event.location) { %>
+                <p class="card-location">📍 <%= helpers.h(event.location) %></p>
+              <% } %>
+              <div class="card-meta">
+                <span class="stat-badge">Présents: <%= presentPresences.length %></span>
+                <span class="stat-badge">Réponses: <%= totalResponses %></span>
+                <span class="stat-badge participation-rate"><%= participationRate %>%</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="primary-button"
+              data-open-modal="presence"
+              data-event-id="<%= event.id %>"
+              data-event-title="<%= helpers.h(event.title) %>"
+              data-responded-ids="<%= helpers.h(respondedAttr) %>"
+              data-default-label="Répondre"
+              data-stop-propagation
+            >
+              Répondre
+            </button>
+          </header>
+          <% if (event.description) { %>
+            <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
+          <% } %>
+        </article>
+
+        <div class="modal-backdrop is-hidden" data-modal="<%= detailModalId %>">
+          <div class="modal">
+            <div class="modal-header">
+              <h2><%= helpers.h(event.title) %></h2>
+              <button class="icon-button" data-close-modal="<%= detailModalId %>" aria-label="Fermer">×</button>
+            </div>
+            <div class="modal-body">
+              <div class="card-meta" style="margin-bottom: 1rem;">
+                <span class="stat-badge">📅 <%= helpers.h(formatEventDate(event.date)) %></span>
+                <% if (event.location) { %><span class="stat-badge">📍 <%= helpers.h(event.location) %></span><% } %>
+                <% if (event.price) { %><span class="stat-badge">💰 <%= helpers.h(event.price) %></span><% } %>
+                <% if (event.organizer) { %><span class="stat-badge">👤 <%= helpers.h(event.organizer) %></span><% } %>
+              </div>
+
+              <% if (event.description) { %>
+                <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
+              <% } %>
+
+              <% if (event.setlist) { %>
+                <div class="attendance-list" style="margin-top: 1rem;">
+                  <div class="attendance-header"><h3>Setlist</h3></div>
+                  <div class="attendance-items">
+                    <div class="card-description"><%- helpers.markdownToHtml(event.setlist) %></div>
+                  </div>
+                </div>
+              <% } %>
+
+              <div class="charts-container">
+                <div class="chart-title">Participation par instrument</div>
+                <div class="chart-card">
+                  <div class="chart-area">
+                    <% if (participationData.length) { %>
+                      <div class="chart-canvas-wrapper">
+                        <canvas class="chart-canvas" data-chart='<%= JSON.stringify(participationData).replace(/'/g, "&apos;") %>'></canvas>
+                      </div>
+                    <% } else { %>
+                      <p class="chart-empty">Pas d'inscrits.</p>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+
+              <div class="attendance-list" style="margin-top: 1rem;">
+                <div class="attendance-header">
+                  <h3>Musiciens présents</h3>
+                  <span class="muted-text"><%= presentPresences.length %> musicien(s)</span>
+                </div>
+                <div class="attendance-items">
+                  <% presentPresences.forEach((presence, index) => { %>
+                    <div class="attendance-item <%= index >= 3 ? 'is-hidden' : '' %>" data-expand-group="present-<%= event.id %>">
+                      <div class="attendance-info">
+                        <span class="attendance-name"><%= helpers.h(presence.musician.firstName + ' ' + presence.musician.lastName) %></span>
+                        <span class="attendance-instrument"><%= helpers.h(presence.musician.instrument.name) %></span>
+                      </div>
+                      <span class="status-chip" style="background: <%= helpers.h(presence.status.color || '#e2e8f0') %>"><%= helpers.h(presence.status.label) %></span>
+                    </div>
+                  <% }) %>
+                </div>
+                <div class="form-actions" style="margin-top: 0.75rem;">
+                  <button type="button" class="ghost-button" data-expand-button="present-<%= event.id %>" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+                </div>
+              </div>
+
+              <div class="attendance-list" style="margin-top: 1rem;">
+                <div class="attendance-header">
+                  <h3>Instruments</h3>
+                  <span class="muted-text"><%= new Set(presentPresences.map((p) => p.musician.instrument.name)).size %> instrument(s)</span>
+                </div>
+                <div class="attendance-items">
+                  <%
+                    const instrumentMap = new Map();
+                    presentPresences.forEach((p) => {
+                      instrumentMap.set(p.musician.instrument.name, (instrumentMap.get(p.musician.instrument.name) || 0) + 1);
+                    });
+                    let instrumentIndex = 0;
+                  %>
+                  <% instrumentMap.forEach((count, instrumentName) => { %>
+                    <div class="attendance-item <%= instrumentIndex >= 3 ? 'is-hidden' : '' %>" data-expand-group="instruments-<%= event.id %>">
+                      <div class="attendance-info">
+                        <span class="attendance-name"><%= helpers.h(instrumentName) %></span>
+                        <span class="attendance-instrument"><%= count %> musicien(s)</span>
+                      </div>
+                    </div>
+                    <% instrumentIndex++; %>
+                  <% }) %>
+                </div>
+                <div class="form-actions" style="margin-top: 0.75rem;">
+                  <button type="button" class="ghost-button" data-expand-button="instruments-<%= event.id %>" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+                </div>
+              </div>
+
+              <div class="attendance-list" style="margin-top: 1.5rem;">
+                <div class="attendance-header">
+                  <h3>Pupitres</h3>
+                  <span class="muted-text"><%= new Set(presentPresences.map((p) => p.musician.instrument.section ? p.musician.instrument.section.name : 'Sans pupitre')).size %> pupitre(s)</span>
+                </div>
+                <div class="attendance-items">
+                  <%
+                    const sectionsMap = new Map();
+                    presentPresences.forEach((p) => {
+                      const sectionName = p.musician.instrument.section ? p.musician.instrument.section.name : 'Sans pupitre';
+                      sectionsMap.set(sectionName, (sectionsMap.get(sectionName) || 0) + 1);
+                    });
+                    let sectionIndex = 0;
+                  %>
+                  <% sectionsMap.forEach((count, sectionName) => { %>
+                    <div class="attendance-item <%= sectionIndex >= 3 ? 'is-hidden' : '' %>" data-expand-group="sections-<%= event.id %>">
+                      <div class="attendance-info">
+                        <span class="attendance-name"><%= helpers.h(sectionName) %></span>
+                        <span class="attendance-instrument"><%= count %> musicien(s)</span>
+                      </div>
+                    </div>
+                    <% sectionIndex++; %>
+                  <% }) %>
+                </div>
+                <div class="form-actions" style="margin-top: 0.75rem;">
+                  <button type="button" class="ghost-button" data-expand-button="sections-<%= event.id %>" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<div class="modal-backdrop is-hidden" data-modal="presence">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 data-modal-title>Répondre à l'événement</h2>
+      <button class="icon-button" data-close-modal="presence" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="post" action="<%= helpers.baseUrl('/presence') %>" class="form" data-presence-form>
+        <input type="hidden" name="event_id" value="" />
+        <input type="hidden" name="musician_id" value="" />
+
+        <label class="form-field">
+          <span>Musicien assigné</span>
+          <select name="musician_select" data-musician-select>
+            <option value="">Choisir un musicien</option>
+            <% musiciansList.forEach((musician) => { %>
+              <option value="<%= musician.id %>" data-first-name="<%= helpers.h(musician.firstName) %>" data-last-name="<%= helpers.h(musician.lastName) %>"><%= helpers.h(musician.firstName + ' ' + musician.lastName) %></option>
+            <% }) %>
+          </select>
+        </label>
+
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Prénom</span>
+            <input type="text" name="first_name" placeholder="Votre prénom" />
+          </label>
+          <label class="form-field">
+            <span>Nom</span>
+            <input type="text" name="last_name" placeholder="Votre nom" />
+          </label>
+        </div>
+
+        <fieldset class="form-field">
+          <legend>Votre réponse</legend>
+          <div class="radio-group">
+            <% uniqueStatuses.forEach((status) => { %>
+              <label class="radio-option">
+                <input type="radio" name="status_id" value="<%= status.id %>" required />
+                <span class="radio-label">
+                  <span class="color-dot" style="background-color: <%= helpers.h(status.color || '#e2e8f0') %>"></span>
+                  <%= helpers.h(status.label) %>
+                </span>
+              </label>
+            <% }) %>
+          </div>
+        </fieldset>
+
+        <label class="form-field">
+          <span>Commentaire</span>
+          <textarea name="comment" rows="3" placeholder="Message, infos complémentaires..."></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Envoyer</button>
+          <button type="button" class="ghost-button" data-close-modal="presence">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer', { helpers }) %>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Open Fanfare</title>
+  <link rel="stylesheet" href="<%= helpers.baseUrl('/assets/css/index.css') %>" />
+  <link rel="stylesheet" href="<%= helpers.baseUrl('/assets/css/app.css') %>" />
+  <link rel="stylesheet" href="<%= helpers.baseUrl('/assets/css/app-login.css') %>" />
+  <link rel="stylesheet" href="<%= helpers.baseUrl('/assets/css/modal.css') %>" />
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <div class="app-container">
+      <div class="branding">
+        <span class="brand-title">Open Fanfare</span>
+        <span class="brand-subtitle">Gestion des présences</span>
+      </div>
+      <button class="menu-toggle" data-menu-toggle aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="nav-links" data-menu>
+        <a class="nav-link <%= activePath === '/' ? 'active' : '' %>" href="<%= helpers.baseUrl('/') %>">Présences</a>
+        <a class="nav-link <%= activePath === '/agenda' ? 'active' : '' %>" href="<%= helpers.baseUrl('/agenda') %>">Agenda</a>
+        <a class="nav-link <%= activePath === '/stats' ? 'active' : '' %>" href="<%= helpers.baseUrl('/stats') %>">Statistiques</a>
+        <a class="nav-link <%= activePath === '/admin' ? 'active' : '' %>" href="<%= helpers.baseUrl('/admin') %>">Administration</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="app-main app-container">
