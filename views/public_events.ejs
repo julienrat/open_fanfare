@@ -1,5 +1,5 @@
 <%
-const eventsList = events || [];
+const eventsList = (events || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
 const statusesList = statuses || [];
 const musiciansList = musicians || [];
 let defaultStatus = null;

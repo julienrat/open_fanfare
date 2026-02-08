@@ -34,7 +34,7 @@ db.transaction(() => {
   const insertSection = db.prepare('INSERT INTO sections (id, name, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?)');
   const insertInstrument = db.prepare('INSERT INTO instruments (id, name, color, section_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
   const insertMusician = db.prepare('INSERT INTO musicians (id, first_name, last_name, color, email, phone, instrument_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-  const insertEvent = db.prepare('INSERT INTO events (id, title, description, date, location, price, organizer, setlist, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertEvent = db.prepare('INSERT INTO events (id, title, description, date, location, price, organizer, setlist, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const insertStatus = db.prepare('INSERT INTO attendance_statuses (id, label, color, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
   const insertAssignment = db.prepare('INSERT INTO event_musicians (id, event_id, musician_id, is_required, notes) VALUES (?, ?, ?, ?, ?)');
   const insertPresence = db.prepare('INSERT INTO presences (id, event_id, musician_id, status_id, comment, responded_at) VALUES (?, ?, ?, ?, ?, ?)');
@@ -49,7 +49,19 @@ db.transaction(() => {
     insertMusician.run(row.id, decodeHtmlEntities(row.first_name || row.firstName), decodeHtmlEntities(row.last_name || row.lastName), row.color || null, row.email || null, row.phone || null, row.instrument_id || row.instrumentId, row.created_at || row.createdAt || new Date().toISOString(), row.updated_at || row.updatedAt || new Date().toISOString());
   });
   (data.events || []).forEach((row) => {
-    insertEvent.run(row.id, decodeHtmlEntities(row.title), decodeHtmlEntities(row.description || null), row.date, decodeHtmlEntities(row.location || null), decodeHtmlEntities(row.price || null), decodeHtmlEntities(row.organizer || null), decodeHtmlEntities(row.setlist || null), row.created_at || row.createdAt || new Date().toISOString(), row.updated_at || row.updatedAt || new Date().toISOString());
+    insertEvent.run(
+      row.id,
+      decodeHtmlEntities(row.title),
+      decodeHtmlEntities(row.description || null),
+      row.date,
+      decodeHtmlEntities(row.location || null),
+      decodeHtmlEntities(row.price || null),
+      decodeHtmlEntities(row.organizer || null),
+      decodeHtmlEntities(row.setlist || null),
+      row.is_hidden ? 1 : 0,
+      row.created_at || row.createdAt || new Date().toISOString(),
+      row.updated_at || row.updatedAt || new Date().toISOString()
+    );
   });
   (data.attendance_statuses || []).forEach((row) => {
     insertStatus.run(row.id, row.label, row.color || null, row.is_default ? 1 : 0, row.created_at || row.createdAt || new Date().toISOString(), row.updated_at || row.updatedAt || new Date().toISOString());

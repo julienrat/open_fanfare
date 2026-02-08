@@ -1,6 +1,6 @@
 <%
 const activePath = path || '/admin';
-const sortedEvents = (events || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+const sortedEvents = (events || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)));
 const sectionsList = sections || [];
 const instrumentsList = instruments || [];
 const musiciansList = musicians || [];
@@ -56,6 +56,7 @@ const musiciansList = musicians || [];
                   data-event-price="<%= helpers.h(event.price || '') %>"
                   data-event-organizer="<%= helpers.h(event.organizer || '') %>"
                   data-event-setlist="<%= helpers.h(event.setlist || '') %>"
+                  data-event-hidden="<%= event.isHidden ? '1' : '' %>"
                   data-expand-group="events">
                 <td>
                   <div class="event-title-cell">
@@ -305,6 +306,10 @@ const musiciansList = musicians || [];
         <p class="muted-text">Markdown accepté : **gras**, *italique*, [lien](https://...), # Titre, - liste.</p>
         <label class="form-field"><span>Setlist (liste des morceaux)</span><textarea name="setlist" rows="5" placeholder="Ex: # Acte 1&#10;- Oh When the Saints&#10;- La Bamba&#10;[Lien](https://...)"></textarea></label>
         <p class="muted-text">Markdown accepté pour la setlist (titres, listes, liens).</p>
+        <label class="form-field checkbox-field">
+          <input type="checkbox" name="is_hidden" value="1" />
+          <span>Masquer ce concert (ne pas afficher dans Présences)</span>
+        </label>
         <p class="muted-text">Tous les musiciens disponibles seront automatiquement ajoutés à cet événement.</p>
         <div class="form-actions">
           <button type="submit" name="action" value="event_save" class="primary-button">Enregistrer</button>

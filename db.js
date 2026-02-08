@@ -13,4 +13,10 @@ if (fs.existsSync(schemaPath)) {
   db.exec(schema);
 }
 
+// Lightweight migration: add is_hidden to events if missing.
+const eventCols = db.prepare("PRAGMA table_info(events)").all().map((c) => c.name);
+if (!eventCols.includes('is_hidden')) {
+  db.exec("ALTER TABLE events ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0");
+}
+
 export default db;

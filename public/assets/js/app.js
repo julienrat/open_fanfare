@@ -212,6 +212,11 @@
             setValue('price', button.getAttribute('data-event-price') || '');
             setValue('organizer', button.getAttribute('data-event-organizer') || '');
             setValue('setlist', button.getAttribute('data-event-setlist') || '');
+            const hidden = button.getAttribute('data-event-hidden') || '';
+            const hiddenInput = form.querySelector('[name="is_hidden"]');
+            if (hiddenInput) {
+              hiddenInput.checked = hidden === '1';
+            }
             if (title) title.textContent = eventId ? 'Modifier le concert' : 'Nouveau concert';
             if (deleteButton) deleteButton.classList.toggle('is-hidden', eventId === '');
           }
