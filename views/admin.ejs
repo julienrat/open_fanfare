@@ -24,7 +24,7 @@ const musiciansList = musicians || [];
         </div>
         <div class="action-group">
           <a class="ghost-button small" href="<%= helpers.baseUrl('/admin/export') %>" title="Exporter toutes les données en JSON">⬇️ Export JSON</a>
-          <button type="button" class="ghost-button small" data-open-modal="json-import" title="Importer des données JSON">⬆️ Import JSON</button>
+          <button type="button" class="ghost-button small admin-danger is-hidden" data-open-modal="json-import" title="Importer des données JSON">⬆️ Import JSON</button>
           <form method="post" action="<%= helpers.baseUrl('/admin/clear') %>" class="inline-form admin-danger is-hidden">
             <button type="submit" class="ghost-button small delete-button" data-confirm="Supprimer toutes les données ?">🧹 Vider la base</button>
           </form>
