@@ -32,6 +32,20 @@ const getMusiciansByInstrument = (eventId, instrumentId) => {
     .sort((a, b) => a.localeCompare(b, 'fr'));
 };
 
+const getPresentMusicians = (eventId) => {
+  const event = sortedEvents.find((e) => e.id === eventId);
+  if (!event) return [];
+  let defaultStatus = null;
+  (event.presences || []).forEach((p) => { if (p.status && p.status.isDefault) defaultStatus = p.status; });
+  const presentPresences = defaultStatus ? (event.presences || []).filter((p) => p.statusId === defaultStatus.id) : (event.presences || []);
+  return presentPresences
+    .map((p) => ({
+      name: `${p.musician.firstName} ${p.musician.lastName}`.trim(),
+      instrument: p.musician.instrument ? p.musician.instrument.name : '',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+};
+
 const columnTotals = {};
 sortedEvents.forEach((event) => {
   let sum = 0;
@@ -55,10 +69,13 @@ sortedEvents.forEach((event) => {
             <th class="sticky-col">Instrument</th>
             <% sortedEvents.forEach((event) => { %>
               <th>
-                <div class="stats-header">
-                  <div class="stats-event-title"><%= helpers.h(event.title) %></div>
-                  <div class="stats-event-date"><%= helpers.h(helpers.formatDateFr(event.date, false)) %></div>
-                </div>
+                <% const eventModalId = `stats-event-${event.id}`; %>
+                <button type="button" class="stats-header-button" data-open-modal="<%= helpers.h(eventModalId) %>" data-stop-propagation>
+                  <div class="stats-header">
+                    <div class="stats-event-title"><%= helpers.h(event.title) %></div>
+                    <div class="stats-event-date"><%= helpers.h(helpers.formatDateFr(event.date, false)) %></div>
+                  </div>
+                </button>
               </th>
             <% }) %>
           </tr>
@@ -97,7 +114,14 @@ sortedEvents.forEach((event) => {
           <tr>
             <td class="sticky-col total-row">Total</td>
             <% sortedEvents.forEach((event) => { %>
-              <td class="total-row"><%= columnTotals[event.id] || 0 %></td>
+              <% const totalModalId = `stats-total-${event.id}`; const total = columnTotals[event.id] || 0; %>
+              <td class="total-row">
+                <% if (total > 0) { %>
+                  <button type="button" class="stats-cell-button" data-open-modal="<%= helpers.h(totalModalId) %>" data-stop-propagation><%= total %></button>
+                <% } else { %>
+                  0
+                <% } %>
+              </td>
             <% }) %>
           </tr>
         </tfoot>
@@ -125,6 +149,60 @@ sortedEvents.forEach((event) => {
       </div>
     </div>
   <% }) %>
+<% }) %>
+
+<% sortedEvents.forEach((event) => { const totalModalId = `stats-total-${event.id}`; const total = columnTotals[event.id] || 0; if (!total) return; const names = getPresentMusicians(event.id); %>
+  <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(totalModalId) %>">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Présents · <%= total %></h2>
+        <button class="icon-button" data-close-modal="<%= helpers.h(totalModalId) %>" aria-label="Fermer">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="muted-text">Musiciens présents pour <strong><%= helpers.h(event.title) %></strong></p>
+        <ul class="musician-list">
+          <% names.forEach((item) => { %>
+            <li><%= helpers.h(item.name) %> <span class="muted-text">· <%= helpers.h(item.instrument) %></span></li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<% sortedEvents.forEach((event) => { const eventModalId = `stats-event-${event.id}`; %>
+  <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(eventModalId) %>">
+    <div class="modal">
+      <div class="modal-header">
+        <h2><%= helpers.h(event.title) %></h2>
+        <button class="icon-button" data-close-modal="<%= helpers.h(eventModalId) %>" aria-label="Fermer">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="event-detail-meta">
+          <span>📅 <%= helpers.h(helpers.formatDateFr(event.date)) %></span>
+          <% if (event.location) { %><span>📍 <%= helpers.h(event.location) %></span><% } %>
+        </div>
+        <% if (event.description) { %>
+          <div class="card-description"><%- helpers.markdownToHtml(event.description) %></div>
+        <% } %>
+        <% if (event.setlist) { %>
+          <div class="attendance-header" style="margin-bottom: 0.35rem;"><h3>Playlist</h3></div>
+          <div class="card-description"><%- helpers.markdownToHtml(event.setlist) %></div>
+        <% } %>
+        <% const comments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+        <% if (comments.length) { %>
+          <div class="comments-section">
+            <h4>Commentaires</h4>
+            <ul class="comments-list">
+              <% comments.forEach((p) => { %>
+                <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
 <% }) %>
 
 <%- include('partials/footer', { helpers }) %>

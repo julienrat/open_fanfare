@@ -150,6 +150,17 @@ const activePath = path || '/';
                 </div>
                 <div class="attendance-items">
                   <div class="card-meta" style="margin-bottom: 0.75rem;">
+                    <% const detailStatusLabel = event.eventStatus || event.event_status || 'prise de contact'; %>
+                    <% const detailStatusKey = String(detailStatusLabel).toLowerCase(); %>
+                    <% const detailStatusClass = (
+                      detailStatusKey === 'prise de contact' ? 'status-contact' :
+                      detailStatusKey === 'devis envoyé' ? 'status-quote' :
+                      detailStatusKey === 'en cours de recrutement fanfarons' ? 'status-recruit' :
+                      detailStatusKey === 'validé' ? 'status-valid' :
+                      detailStatusKey === 'annulé' ? 'status-canceled' :
+                      detailStatusKey === 'facturé' ? 'status-billed' : 'status-neutral'
+                    ); %>
+                    <span class="stat-badge status-badge <%= detailStatusClass %>"><%= helpers.h(detailStatusLabel) %></span>
                     <span class="stat-badge">📅 <%= helpers.h(formatEventDate(event.date)) %></span>
                     <% if (event.location) { %><span class="stat-badge">📍 <%= helpers.h(event.location) %></span><% } %>
                     <% if (event.price) { %><span class="stat-badge">💰 <%= helpers.h(event.price) %></span><% } %>
