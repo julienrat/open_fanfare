@@ -346,21 +346,8 @@ if ($path === '/presence' && $method === 'POST') {
     redirect('/');
 }
 
-if ($path === '/admin/logout' && $method === 'POST') {
-    logout_admin();
-    redirect('/admin');
-}
-
-if ($path === '/admin' && $method === 'POST' && !is_admin_authenticated()) {
-    $password = request_string('password');
-    if (login_admin($password)) {
-        redirect('/admin');
-    }
-    set_flash('error', 'Mot de passe administrateur incorrect.');
-    redirect('/admin');
-}
-
-if ($path === '/admin' && $method === 'POST' && is_admin_authenticated()) {
+if ($path === '/admin' && $method === 'POST') {
+    require_admin_login();
     $action = request_string('action');
 
     try {
@@ -690,15 +677,7 @@ if ($path === '/stats') {
 }
 
 if ($path === '/admin') {
-    if (!is_admin_authenticated()) {
-        render('admin_login', [
-            'path' => $path,
-            'flash' => get_flash(),
-            'isAuthenticated' => true,
-        ]);
-        exit;
-    }
-
+    require_admin_login();
     $events = get_events();
     $sections = get_sections();
     $instruments = get_instruments();

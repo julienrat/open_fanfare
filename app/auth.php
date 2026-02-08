@@ -24,12 +24,7 @@ function is_app_authenticated(): bool
 
 function is_admin_authenticated(): bool
 {
-    if (is_admin_basic_authenticated()) {
-        return true;
-    }
-    $config = auth_config();
-    $token = $_COOKIE['admin_token'] ?? '';
-    return $token !== '' && validate_admin_token($token, $config['admin_secret'], (int)$config['admin_token_ttl']);
+    return is_admin_basic_authenticated();
 }
 
 function login_app(string $password): bool
@@ -45,19 +40,6 @@ function login_app(string $password): bool
 
 function login_admin(string $password): bool
 {
-    $config = auth_config();
-    if ($password !== '' && hash_equals($config['admin_secret'], $password)) {
-        $token = create_admin_token($config['admin_secret']);
-        $ttl = (int)$config['admin_token_ttl'];
-        $cookiePath = (defined('BASE_URL') && BASE_URL !== '') ? BASE_URL . '/' : '/';
-        setcookie('admin_token', $token, [
-            'expires' => time() + $ttl,
-            'path' => $cookiePath,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
-        return true;
-    }
     return false;
 }
 
@@ -74,15 +56,7 @@ function logout_all(): void
 
 function logout_admin(): void
 {
-    if (isset($_COOKIE['admin_token'])) {
-        $cookiePath = (defined('BASE_URL') && BASE_URL !== '') ? BASE_URL . '/' : '/';
-        setcookie('admin_token', '', [
-            'expires' => time() - 3600,
-            'path' => $cookiePath,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
-    }
+    return;
 }
 
 function require_app_login(): void
@@ -104,13 +78,13 @@ function is_admin_basic_authenticated(): bool
 {
     $config = auth_config();
     $user = $config['admin_user'] ?? 'admin';
-    $secret = $config['admin_secret'] ?? '';
+    $secret = (string)($config['admin_secret'] ?? '');
 
     $authUser = $_SERVER['PHP_AUTH_USER'] ?? null;
     $authPass = $_SERVER['PHP_AUTH_PW'] ?? null;
 
-    if ($authUser === null && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $header = $_SERVER['HTTP_AUTHORIZATION'];
+    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
+    if ($authUser === null && $header) {
         if (stripos($header, 'Basic ') === 0) {
             $decoded = base64_decode(substr($header, 6), true);
             if ($decoded !== false && str_contains($decoded, ':')) {
@@ -125,38 +99,11 @@ function is_admin_basic_authenticated(): bool
     if ($secret === '') {
         return false;
     }
-    return hash_equals($user, (string)$authUser) && hash_equals($secret, (string)$authPass);
-}
-
-function create_admin_token(string $secret): string
-{
-    $payload = json_encode(['ts' => time()], JSON_UNESCAPED_UNICODE);
-    $payload64 = rtrim(strtr(base64_encode($payload), '+/', '-_'), '=');
-    $sig = hash_hmac('sha256', $payload64, $secret);
-    return $payload64 . '.' . $sig;
-}
-
-function validate_admin_token(string $token, string $secret, int $ttl): bool
-{
-    if ($secret === '' || $token === '') {
+    if (!hash_equals($secret, (string)$authPass)) {
         return false;
     }
-    $parts = explode('.', $token, 2);
-    if (count($parts) !== 2) {
-        return false;
+    if ($user === '' || $authUser === null) {
+        return true;
     }
-    [$payload64, $sig] = $parts;
-    $expected = hash_hmac('sha256', $payload64, $secret);
-    if (!hash_equals($expected, $sig)) {
-        return false;
-    }
-    $payload = json_decode(base64_decode(strtr($payload64, '-_', '+/')) ?: '', true);
-    if (!is_array($payload) || !isset($payload['ts'])) {
-        return false;
-    }
-    $ts = (int)$payload['ts'];
-    if ($ttl > 0 && (time() - $ts) > $ttl) {
-        return false;
-    }
-    return true;
+    return hash_equals($user, (string)$authUser);
 }
