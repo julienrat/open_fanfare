@@ -8,10 +8,9 @@ Pensée pour être simple, rapide et agréable à utiliser, l’interface combin
 - [À propos](#-à-propos)
 - [Fonctionnalités](#-fonctionnalités)
 - [Prérequis](#-prérequis)
-- [Installation serveur](#-installation-serveur-php--postgresql)
+- [Installation serveur](#-installation-serveur-nodejs--sqlite)
 - [Configuration](#-configuration)
 - [Initialiser la base (manuel)](#-initialiser-la-base-manuel)
-- [Migration SQLite → PostgreSQL](#-migration-sqlite--postgresql)
 - [Lancement](#-lancement)
 - [Structure du projet](#-structure-du-projet)
 
@@ -25,7 +24,7 @@ Pensée pour être simple, rapide et agréable à utiliser, l’interface combin
 - 🎼 documenter les concerts (description, setlist en Markdown)
 - 📥 importer/exporter les données (CSV / JSON)
 
-L’application est un **monolithe PHP** avec **PostgreSQL**, conçu pour une installation simple sur un serveur classique (Nginx/Apache + PHP-FPM).
+L’application est désormais un **monolithe Node.js** avec **SQLite**, conçu pour une installation simple sur un serveur classique (Nginx en reverse proxy).
 
 ## ✨ Fonctionnalités
 
@@ -49,10 +48,9 @@ L’application est un **monolithe PHP** avec **PostgreSQL**, conçu pour une in
 
 ## 📦 Prérequis
 
-- **PHP 8.1+** avec `pdo_pgsql` (et `intl` recommandé)
-- **PostgreSQL 14+**
-- **Nginx + PHP-FPM** (production)
-- **SQLite + pdo_sqlite** (optionnel, migration)
+- **Node.js 18+** (npm inclus)
+- **Nginx** (recommandé pour la prod)
+- **SQLite** (fichier local, aucune installation serveur nécessaire)
 
 ## 🚀 Installation
 
@@ -61,7 +59,7 @@ git clone <url-du-depot>
 cd open_fanfare
 ```
 
-## 🧰 Installation serveur (PHP + PostgreSQL)
+## 🧰 Installation serveur (Node.js + SQLite)
 
 ### 1) Installer les dépendances
 
@@ -69,7 +67,7 @@ Exemple Ubuntu/Debian :
 
 ```bash
 sudo apt update
-sudo apt install -y nginx php-fpm php-pgsql php-intl postgresql
+sudo apt install -y nginx nodejs npm
 ```
 
 ### 2) Configurer l’application
@@ -77,26 +75,24 @@ sudo apt install -y nginx php-fpm php-pgsql php-intl postgresql
 Créez un fichier `.env` à la racine du projet :
 
 ```env
-APP_PASSWORD="mot-de-passe-app"
-ADMIN_SECRET="mot-de-passe-admin"
-
-DB_HOST="127.0.0.1"
-DB_PORT="5432"
-DB_NAME="openfanfare"
-DB_USER="openfanfare"
-DB_PASS="changeme"
-DB_SSLMODE="prefer"
+PORT=8000
+BASE_URL=""
+DB_PATH="/var/www/open_fanfare/data.sqlite"
 ```
 
-### 3) Initialiser la base de données
-
-Utilisez le script fourni (gère les droits et les séquences) :
+### 3) Installer les dépendances Node
 
 ```bash
-sudo -u postgres bash scripts/deploy_db.sh
+npm install
 ```
 
-### 4) Configurer le serveur web
+### 4) Importer les données (optionnel)
+
+```bash
+node scripts/import_json.js /chemin/vers/openfanfare-export.json
+```
+
+### 5) Configurer le serveur web
 
 Exemple Nginx (racine sur `public/`) :
 
@@ -105,16 +101,14 @@ server {
   listen 80;
   server_name ton-domaine.fr;
 
-  root /var/www/open_fanfare/public;
-  index index.php;
+  root /var/www/open_fanfare;
 
   location / {
-    try_files $uri /index.php?$query_string;
-  }
-
-  location ~ \\.php$ {
-    include snippets/fastcgi-php.conf;
-    fastcgi_pass unix:/run/php/php8.1-fpm.sock;
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
   }
 }
 ```
@@ -130,49 +124,31 @@ sudo systemctl restart nginx
 Créez un fichier `.env` à la racine du projet :
 
 ```env
-APP_PASSWORD="mot-de-passe-app"
-ADMIN_SECRET="mot-de-passe-admin"
-
-DB_HOST="127.0.0.1"
-DB_PORT="5432"
-DB_NAME="openfanfare"
-DB_USER="openfanfare"
-DB_PASS="changeme"
-DB_SSLMODE="prefer"
-```
-
-## 🗄️ Initialiser la base (manuel)
-
-```bash
-psql -d openfanfare -f database/schema.sql
-psql -d openfanfare -f database/seed.sql
-```
-
-## 🔁 Migration SQLite → PostgreSQL
-
-```bash
-export SQLITE_PATH=/chemin/vers/dev.db
-php scripts/migrate_sqlite_to_postgres.php
+PORT=8000
+BASE_URL=""
+DB_PATH="./data.sqlite"
 ```
 
 ## 🎬 Lancement
 
-Configurez Nginx pour servir `public/` et router toutes les requêtes vers `public/index.php` :
+En local :
 
-```nginx
-location / {
-  try_files $uri /index.php?$query_string;
-}
+```bash
+npm start
 ```
+
+En production, utilise un process manager (ex: systemd, PM2).
 
 ## 📁 Structure du projet
 
 ```
 open_fanfare/
-├── app/                 # Logique serveur (config, auth, vues)
-├── database/            # Schéma SQL + seed Postgres
-├── public/              # Front controller + assets
-├── scripts/             # Utilitaires (migration SQLite → Postgres)
+├── database/            # Schéma SQLite
+├── public/              # Assets statiques
+├── scripts/             # Import JSON
+├── views/               # Templates EJS
+├── server.js            # Serveur Express
+├── db.js                # Connexion SQLite
 └── README.md
 ```
 
