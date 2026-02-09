@@ -93,7 +93,9 @@ const activePath = path || '/';
           const responseMapAttr = encodeURIComponent(JSON.stringify(responseMap));
           const respondedAttr = respondedIds.join(',');
         %>
-        <article class="card clickable" data-open-modal="<%= detailModalId %>">
+        <% const cardStatusKey = String(event.eventStatus || event.event_status || '').toLowerCase(); %>
+        <% const statusCardClass = cardStatusKey === 'validé' ? 'card-validated' : cardStatusKey === 'annulé' ? 'card-canceled' : ''; %>
+        <article class="card clickable <%= statusCardClass %>" data-open-modal="<%= detailModalId %>">
           <header class="card-header">
             <div class="card-header-content">
               <h2><%= helpers.h(event.title) %></h2>
@@ -149,6 +151,19 @@ const activePath = path || '/';
                   <h3>Infos du concert</h3>
                   <div class="modal-actions" style="display:flex;align-items:center;gap:0.5rem;">
                     <% const detailCommentsHeader = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
+                    <button
+                      type="button"
+                      class="primary-button"
+                      data-open-modal="presence"
+                      data-event-id="<%= event.id %>"
+                      data-event-title="<%= helpers.h(event.title) %>"
+                      data-responded-ids="<%= helpers.h(respondedAttr) %>"
+                      data-response-map="<%= helpers.h(responseMapAttr) %>"
+                      data-default-label="Répondre"
+                      data-stop-propagation
+                    >
+                      Répondre
+                    </button>
                     <% if (detailCommentsHeader.length) { const commentsModalId = `comments-${event.id}`; %>
                       <button type="button" class="ghost-button small" data-open-modal="<%= helpers.h(commentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
                     <% } %>
