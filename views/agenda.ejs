@@ -172,7 +172,18 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
             <div class="form-actions" style="margin: 0.5rem 0 0;">
               <% const agendaComments = (stat.event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
               <% if (agendaComments.length) { const agendaCommentsModalId = `agenda-comments-${stat.event.id}`; %>
-                <button type="button" class="ghost-button" data-open-modal="<%= helpers.h(agendaCommentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+                <button
+                  type="button"
+                  class="ghost-button"
+                  data-open-modal="<%= helpers.h(agendaCommentsModalId) %>"
+                  data-comment-button
+                  data-comment-key="event-<%= stat.event.id %>"
+                  data-comment-modal="<%= helpers.h(agendaCommentsModalId) %>"
+                  data-comment-count="<%= agendaComments.length %>"
+                  data-stop-propagation
+                >
+                  💬 Commentaires (<span class="comment-count"><%= agendaComments.length %></span>)
+                </button>
               <% } %>
               <a class="ghost-button" href="<%= helpers.baseUrl('/ical/event/' + stat.event.id) %>" title="Exporter">📅 Exporter</a>
             </div>
@@ -234,7 +245,11 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
           <p class="muted-text">Concert : <strong><%= helpers.h(stat.event.title) %></strong></p>
           <ul class="comments-list">
             <% comments.forEach((p) => { %>
-              <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+              <li>
+                <strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong>
+                <span class="muted-text"> · <%= helpers.h(helpers.formatDateFr(p.respondedAt || p.responded_at || '', true)) %></span>
+                : <%= helpers.h(p.comment) %>
+              </li>
             <% }) %>
           </ul>
         </div>

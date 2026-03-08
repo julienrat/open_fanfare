@@ -48,6 +48,43 @@
   const openButtons = document.querySelectorAll('[data-open-modal]');
   const closeButtons = document.querySelectorAll('[data-close-modal]');
 
+  const commentReadStorageKey = (key) => `comment_read_${key}`;
+  const isCommentRead = (key) => {
+    if (!key) return false;
+    try {
+      return window.localStorage.getItem(commentReadStorageKey(key)) === '1';
+    } catch (e) {
+      return false;
+    }
+  };
+  const markCommentRead = (key) => {
+    if (!key) return;
+    try {
+      window.localStorage.setItem(commentReadStorageKey(key), '1');
+    } catch (e) {
+      // ignore
+    }
+  };
+  const refreshCommentButtons = () => {
+    document.querySelectorAll('[data-comment-button]').forEach((button) => {
+      const key = button.getAttribute('data-comment-key') || '';
+      const count = Number(button.getAttribute('data-comment-count') || 0);
+      const unread = count > 0 && !isCommentRead(key);
+      const countEl = button.querySelector('.comment-count');
+      if (countEl) {
+        countEl.style.fontWeight = unread ? '800' : '400';
+      }
+    });
+  };
+  const markCommentReadByModal = (modalId) => {
+    if (!modalId) return;
+    document.querySelectorAll(`[data-comment-button][data-comment-modal="${modalId}"]`).forEach((button) => {
+      const key = button.getAttribute('data-comment-key') || '';
+      markCommentRead(key);
+    });
+    refreshCommentButtons();
+  };
+
   const collapseExpandGroups = (root) => {
     const groups = {};
     root.querySelectorAll('[data-expand-group]').forEach((row) => {
@@ -72,6 +109,7 @@
   const openModal = (id) => {
     const modal = document.querySelector(`[data-modal="${id}"]`);
     if (modal) {
+      markCommentReadByModal(id);
       if (id.startsWith('event-detail-')) {
         collapseExpandGroups(modal);
       }
@@ -421,6 +459,7 @@
   updatePresencesTitle();
   updateRespondButtons();
   wireWhoAreYou();
+  refreshCommentButtons();
 
   document.querySelectorAll('[data-expand-button]').forEach((button) => {
     button.addEventListener('click', () => {

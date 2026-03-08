@@ -199,7 +199,18 @@ sortedEvents.forEach((event) => {
         <% const statsComments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
         <% if (statsComments.length) { const statsCommentsModalId = `stats-comments-${event.id}`; %>
           <div class="form-actions" style="margin: 0.75rem 0 0;">
-            <button type="button" class="ghost-button" data-open-modal="<%= helpers.h(statsCommentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+            <button
+              type="button"
+              class="ghost-button"
+              data-open-modal="<%= helpers.h(statsCommentsModalId) %>"
+              data-comment-button
+              data-comment-key="event-<%= event.id %>"
+              data-comment-modal="<%= helpers.h(statsCommentsModalId) %>"
+              data-comment-count="<%= statsComments.length %>"
+              data-stop-propagation
+            >
+              💬 Commentaires (<span class="comment-count"><%= statsComments.length %></span>)
+            </button>
           </div>
         <% } %>
         <% if (event.description) { %>
@@ -225,7 +236,11 @@ sortedEvents.forEach((event) => {
         <p class="muted-text">Concert : <strong><%= helpers.h(event.title) %></strong></p>
         <ul class="comments-list">
           <% statsComments.forEach((p) => { %>
-            <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+            <li>
+              <strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong>
+              <span class="muted-text"> · <%= helpers.h(helpers.formatDateFr(p.respondedAt || p.responded_at || '', true)) %></span>
+              : <%= helpers.h(p.comment) %>
+            </li>
           <% }) %>
         </ul>
       </div>

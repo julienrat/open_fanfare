@@ -79,6 +79,7 @@ const activePath = path || '/';
           const participationData = computeParticipationData(event, defaultStatus);
           const missingData = computeMissingData(event, defaultStatus);
           const detailModalId = `event-detail-${event.id}`;
+          const presentModalId = `event-present-${event.id}`;
           const noResponseModalId = `event-noresponse-${event.id}`;
           let presentPresences = [];
           if (defaultStatus) {
@@ -131,7 +132,7 @@ const activePath = path || '/';
                   statusKey === 'facturé' ? 'status-billed' : 'status-neutral'
                 ); %>
                 <span class="stat-badge status-badge <%= statusClass %>"><%= helpers.h(statusLabel) %></span>
-                <span class="stat-badge">Présents: <%= presentPresences.length %></span>
+                <button type="button" class="stat-badge" data-open-modal="<%= presentModalId %>" data-stop-propagation>Présents: <%= presentPresences.length %></button>
                 <button type="button" class="stat-badge" data-open-modal="<%= noResponseModalId %>" data-stop-propagation>Réponses: <%= totalResponses %></button>
                 <span class="stat-badge participation-rate"><%= participationRate %>%</span>
               </div>
@@ -181,7 +182,18 @@ const activePath = path || '/';
                       Répondre
                     </button>
                     <% if (detailCommentsHeader.length) { const commentsModalId = `comments-${event.id}`; %>
-                      <button type="button" class="ghost-button small" data-open-modal="<%= helpers.h(commentsModalId) %>" data-stop-propagation>💬 Commentaires</button>
+                      <button
+                        type="button"
+                        class="ghost-button small"
+                        data-open-modal="<%= helpers.h(commentsModalId) %>"
+                        data-comment-button
+                        data-comment-key="event-<%= event.id %>"
+                        data-comment-modal="<%= helpers.h(commentsModalId) %>"
+                        data-comment-count="<%= detailCommentsHeader.length %>"
+                        data-stop-propagation
+                      >
+                        💬 Commentaires (<span class="comment-count"><%= detailCommentsHeader.length %></span>)
+                      </button>
                     <% } %>
                     <a class="ghost-button small" href="<%= helpers.baseUrl('/ical/event/' + event.id) %>" title="Exporter">📅 Exporter</a>
                   </div>
@@ -348,6 +360,28 @@ const activePath = path || '/';
             </div>
           </div>
         </div>
+        <div class="modal-backdrop is-hidden" data-modal="<%= presentModalId %>">
+          <div class="modal">
+            <div class="modal-header">
+              <h2>Musiciens présents</h2>
+              <button class="icon-button" data-close-modal="<%= presentModalId %>" aria-label="Fermer">×</button>
+            </div>
+            <div class="modal-body">
+              <% if (presentPresences.length) { %>
+                <ul class="musician-list">
+                  <% presentPresences.forEach((presence) => { %>
+                    <li>
+                      <strong><%= helpers.h(`${presence.musician.firstName} ${presence.musician.lastName}`.trim()) %></strong>
+                      <span class="muted-text"> · <%= helpers.h(presence.musician.instrument.name) %></span>
+                    </li>
+                  <% }) %>
+                </ul>
+              <% } else { %>
+                <p class="muted-text">Aucun musicien présent pour le moment.</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
         <% const detailComments = (event.presences || []).filter((p) => p.comment && String(p.comment).trim()); %>
         <% if (detailComments.length) { const commentsModalId = `comments-${event.id}`; %>
           <div class="modal-backdrop is-hidden" data-modal="<%= helpers.h(commentsModalId) %>">
@@ -359,7 +393,11 @@ const activePath = path || '/';
               <div class="modal-body">
                 <ul class="comments-list">
                   <% detailComments.forEach((p) => { %>
-                    <li><strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong> : <%= helpers.h(p.comment) %></li>
+                    <li>
+                      <strong><%= helpers.h(`${p.musician.firstName} ${p.musician.lastName}`.trim()) %></strong>
+                      <span class="muted-text"> · <%= helpers.h(helpers.formatDateFr(p.respondedAt || p.responded_at || '', true)) %></span>
+                      : <%= helpers.h(p.comment) %>
+                    </li>
                   <% }) %>
                 </ul>
               </div>
