@@ -369,27 +369,26 @@ const activePath = path || '/';
             <div class="modal-body">
               <% if (presentPresences.length) { %>
                 <%
-                  const presentByInstrument = new Map();
-                  presentPresences.forEach((presence) => {
-                    const instrumentName = presence.musician.instrument ? presence.musician.instrument.name : 'Sans instrument';
-                    if (!presentByInstrument.has(instrumentName)) presentByInstrument.set(instrumentName, []);
-                    presentByInstrument.get(instrumentName).push(`${presence.musician.firstName} ${presence.musician.lastName}`.trim());
-                  });
-                  const sortedInstruments = Array.from(presentByInstrument.keys()).sort((a, b) => a.localeCompare(b, 'fr'));
+                  const sortedPresent = presentPresences
+                    .slice()
+                    .sort((a, b) => {
+                      const instA = a.musician.instrument ? a.musician.instrument.name : 'Sans instrument';
+                      const instB = b.musician.instrument ? b.musician.instrument.name : 'Sans instrument';
+                      const byInstrument = instA.localeCompare(instB, 'fr');
+                      if (byInstrument !== 0) return byInstrument;
+                      const nameA = `${a.musician.firstName} ${a.musician.lastName}`.trim();
+                      const nameB = `${b.musician.firstName} ${b.musician.lastName}`.trim();
+                      return nameA.localeCompare(nameB, 'fr');
+                    });
                 %>
-                <% sortedInstruments.forEach((instrumentName) => { %>
-                  <div class="attendance-list" style="margin-bottom: 0.75rem;">
-                    <div class="attendance-header">
-                      <h3><%= helpers.h(instrumentName) %></h3>
-                      <span class="muted-text"><%= presentByInstrument.get(instrumentName).length %></span>
-                    </div>
-                    <ul class="musician-list">
-                      <% presentByInstrument.get(instrumentName).sort((a, b) => a.localeCompare(b, 'fr')).forEach((name) => { %>
-                        <li><%= helpers.h(name) %></li>
-                      <% }) %>
-                    </ul>
-                  </div>
-                <% }) %>
+                <ul class="musician-list">
+                  <% sortedPresent.forEach((presence) => { %>
+                    <li>
+                      <strong><%= helpers.h(`${presence.musician.firstName} ${presence.musician.lastName}`.trim()) %></strong>
+                      <span class="muted-text"> · <%= helpers.h(presence.musician.instrument ? presence.musician.instrument.name : 'Sans instrument') %></span>
+                    </li>
+                  <% }) %>
+                </ul>
               <% } else { %>
                 <p class="muted-text">Aucun musicien présent pour le moment.</p>
               <% } %>
