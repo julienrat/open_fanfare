@@ -72,7 +72,18 @@ const musiciansList = musicians || [];
                 </td>
                 <td>
                   <div class="event-meta-cell">
-                    <% if (event.location) { %><span>📍 <%= helpers.h(event.location) %></span><% } %>
+                    <% if (event.location) { %>
+                      <a
+                        class="location-link"
+                        href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent(event.location) %>"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ouvrir l'itinéraire"
+                        data-stop-propagation
+                      >
+                        📍 <%= helpers.h(event.location) %>
+                      </a>
+                    <% } %>
                     <% if (event.price) { %><span>💰 <%= helpers.h(event.price) %></span><% } %>
                     <% if (event.organizer) { %><span>👤 <%= helpers.h(event.organizer) %></span><% } %>
                   </div>

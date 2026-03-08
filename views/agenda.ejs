@@ -155,7 +155,18 @@ const weekDays = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
               <h3><%= helpers.h(stat.event.title) %></h3>
               <div class="event-detail-meta">
                 <span>⏰ <%= helpers.h(formatDayTitle(dayKey)) %> - <%= helpers.h(formatEventTime(stat.event.date)) %></span>
-                <% if (stat.event.location) { %><span>📍 <%= helpers.h(stat.event.location) %></span><% } %>
+                <% if (stat.event.location) { %>
+                  <a
+                    class="location-link"
+                    href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent(stat.event.location) %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Ouvrir l'itinéraire"
+                    data-stop-propagation
+                  >
+                    📍 <%= helpers.h(stat.event.location) %>
+                  </a>
+                <% } %>
               </div>
             </div>
             <div class="form-actions" style="margin: 0.5rem 0 0;">
