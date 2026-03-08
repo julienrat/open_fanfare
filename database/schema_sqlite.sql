@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS musicians (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
+  is_admin INTEGER NOT NULL DEFAULT 0,
   color TEXT,
   email TEXT,
   phone TEXT,

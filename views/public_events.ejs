@@ -79,6 +79,7 @@ const activePath = path || '/';
           const participationData = computeParticipationData(event, defaultStatus);
           const missingData = computeMissingData(event, defaultStatus);
           const detailModalId = `event-detail-${event.id}`;
+          const noResponseModalId = `event-noresponse-${event.id}`;
           let presentPresences = [];
           if (defaultStatus) {
             presentPresences = presences.filter((p) => p.statusId === defaultStatus.id);
@@ -92,6 +93,10 @@ const activePath = path || '/';
           });
           const responseMapAttr = encodeURIComponent(JSON.stringify(responseMap));
           const respondedAttr = respondedIds.join(',');
+          const nonResponders = assignments
+            .filter((assignment) => !respondedIds.includes(assignment.musicianId))
+            .map((assignment) => `${assignment.musician.firstName} ${assignment.musician.lastName}`.trim())
+            .sort((a, b) => a.localeCompare(b, 'fr'));
         %>
         <% const cardStatusKey = String(event.eventStatus || event.event_status || '').toLowerCase(); %>
         <% const statusCardClass = cardStatusKey === 'validé' ? 'card-validated' : cardStatusKey === 'annulé' ? 'card-canceled' : ''; %>
@@ -101,7 +106,18 @@ const activePath = path || '/';
               <h2><%= helpers.h(event.title) %></h2>
               <p class="card-date"><%= helpers.h(formatEventDate(event.date)) %></p>
               <% if (event.location) { %>
-                <p class="card-location">📍 <%= helpers.h(event.location) %></p>
+                <p class="card-location">
+                  <a
+                    class="location-link"
+                    href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent(event.location) %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-stop-propagation
+                    title="Ouvrir l'itinéraire"
+                  >
+                    📍 <%= helpers.h(event.location) %>
+                  </a>
+                </p>
               <% } %>
               <div class="card-meta">
                 <% const statusLabel = event.eventStatus || event.event_status || 'prise de contact'; %>
@@ -116,7 +132,7 @@ const activePath = path || '/';
                 ); %>
                 <span class="stat-badge status-badge <%= statusClass %>"><%= helpers.h(statusLabel) %></span>
                 <span class="stat-badge">Présents: <%= presentPresences.length %></span>
-                <span class="stat-badge">Réponses: <%= totalResponses %></span>
+                <button type="button" class="stat-badge" data-open-modal="<%= noResponseModalId %>" data-stop-propagation>Réponses: <%= totalResponses %></button>
                 <span class="stat-badge participation-rate"><%= participationRate %>%</span>
               </div>
             </div>
@@ -184,7 +200,18 @@ const activePath = path || '/';
                     ); %>
                     <span class="stat-badge status-badge <%= detailStatusClass %>"><%= helpers.h(detailStatusLabel) %></span>
                     <span class="stat-badge">📅 <%= helpers.h(formatEventDate(event.date)) %></span>
-                    <% if (event.location) { %><span class="stat-badge">📍 <%= helpers.h(event.location) %></span><% } %>
+                    <% if (event.location) { %>
+                      <a
+                        class="stat-badge location-link"
+                        href="https://www.google.com/maps/search/?api=1&query=<%= encodeURIComponent(event.location) %>"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-stop-propagation
+                        title="Ouvrir l'itinéraire"
+                      >
+                        📍 <%= helpers.h(event.location) %>
+                      </a>
+                    <% } %>
                     <% if (event.price) { %><span class="stat-badge">💰 <%= helpers.h(event.price) %></span><% } %>
                     <% if (event.organizer) { %><span class="stat-badge">👤 <%= helpers.h(event.organizer) %></span><% } %>
                   </div>
@@ -299,6 +326,25 @@ const activePath = path || '/';
                   <button type="button" class="ghost-button" data-expand-button="sections-<%= event.id %>" data-expand-open="Déplier" data-expand-close="Replier">Déplier</button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-backdrop is-hidden" data-modal="<%= noResponseModalId %>">
+          <div class="modal">
+            <div class="modal-header">
+              <h2>Musiciens sans réponse</h2>
+              <button class="icon-button" data-close-modal="<%= noResponseModalId %>" aria-label="Fermer">×</button>
+            </div>
+            <div class="modal-body">
+              <% if (nonResponders.length) { %>
+                <ul class="musician-list">
+                  <% nonResponders.forEach((name) => { %>
+                    <li><%= helpers.h(name) %></li>
+                  <% }) %>
+                </ul>
+              <% } else { %>
+                <p class="muted-text">Tout le monde a répondu.</p>
+              <% } %>
             </div>
           </div>
         </div>

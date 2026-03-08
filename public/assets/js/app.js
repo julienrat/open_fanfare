@@ -1,4 +1,22 @@
 (() => {
+  const adminScope = document.querySelector('[data-admin-ids]');
+  const getCurrentMusicianId = () => {
+    try {
+      return window.localStorage.getItem('lastMusicianId') || '';
+    } catch (e) {
+      return '';
+    }
+  };
+  const isCurrentAdmin = () => {
+    if (!adminScope) return false;
+    const adminIds = (adminScope.getAttribute('data-admin-ids') || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value !== '');
+    const currentId = getCurrentMusicianId();
+    return !!currentId && adminIds.includes(currentId);
+  };
+
   const toggleAdminDanger = (visible) => {
     document.querySelectorAll('.admin-danger').forEach((el) => {
       el.classList.toggle('is-hidden', !visible);
@@ -9,7 +27,7 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Control' && !ctrlDown) {
       ctrlDown = true;
-      toggleAdminDanger(true);
+      toggleAdminDanger(isCurrentAdmin());
     }
   });
   document.addEventListener('keyup', (event) => {
@@ -198,6 +216,10 @@
             setValue('color', button.getAttribute('data-musician-color') || '');
             setValue('email', button.getAttribute('data-musician-email') || '');
             setValue('phone', button.getAttribute('data-musician-phone') || '');
+            const adminInput = form.querySelector('[name="is_admin"]');
+            if (adminInput) {
+              adminInput.checked = (button.getAttribute('data-musician-admin') || '') === '1';
+            }
             if (title) title.textContent = musicianId ? 'Modifier le musicien' : 'Nouveau musicien';
             if (deleteButton) deleteButton.classList.toggle('is-hidden', musicianId === '');
           }
@@ -218,8 +240,24 @@
             if (hiddenInput) {
               hiddenInput.checked = hidden === '1';
             }
+            const actorInput = form.querySelector('[name="actor_musician_id"]');
+            let savedId = '';
+            try {
+              savedId = window.localStorage.getItem('lastMusicianId') || '';
+            } catch (e) {
+              savedId = '';
+            }
+            if (actorInput) {
+              actorInput.value = savedId;
+            }
+            const isAdmin = savedId && document.querySelector(`.item-card[data-musician-id="${savedId}"][data-musician-admin="1"]`);
             if (title) title.textContent = eventId ? 'Modifier le concert' : 'Nouveau concert';
-            if (deleteButton) deleteButton.classList.toggle('is-hidden', eventId === '');
+            if (deleteButton) {
+              deleteButton.classList.toggle('is-hidden', eventId === '');
+              const canDelete = !!isAdmin;
+              deleteButton.disabled = !canDelete;
+              deleteButton.title = canDelete ? 'Supprimer' : 'Réservé aux administrateurs';
+            }
           }
         }
       }
@@ -424,6 +462,12 @@
       if (!window.confirm(message)) {
         event.preventDefault();
       }
+    });
+  });
+
+  document.querySelectorAll('.location-link').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.stopPropagation();
     });
   });
 })();

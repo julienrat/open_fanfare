@@ -225,7 +225,7 @@ const getInstruments = () => {
 
 const getMusicians = () => {
   const rows = db.prepare(`
-    SELECT m.id, m.first_name, m.last_name, m.color, m.email, m.phone, m.instrument_id, m.created_at, m.updated_at,
+    SELECT m.id, m.first_name, m.last_name, m.is_admin, m.color, m.email, m.phone, m.instrument_id, m.created_at, m.updated_at,
            i.id AS instrument_id, i.name AS instrument_name, i.color AS instrument_color, i.section_id,
            s.id AS section_id, s.name AS section_name, s.color AS section_color
     FROM musicians m
@@ -237,6 +237,7 @@ const getMusicians = () => {
     id: row.id,
     firstName: row.first_name,
     lastName: row.last_name,
+    isAdmin: !!row.is_admin,
     color: row.color,
     email: row.email,
     phone: row.phone,
@@ -617,16 +618,32 @@ app.post(`${BASE_URL}/admin`, upload.none(), (req, res) => {
         const firstName = String(req.body.first_name || '').trim();
         const lastName = String(req.body.last_name || '').trim();
         const instrumentId = Number(req.body.instrument_id || 0);
+        let isAdmin = (req.body.is_admin === '1' || req.body.is_admin === 'on') ? 1 : 0;
         const color = normalizeHexColor(req.body.color || null);
         const email = req.body.email || null;
         const phone = req.body.phone || null;
         if (!firstName || !lastName || !instrumentId) break;
+        const hasOtherAdmin = id
+          ? db.prepare('SELECT id FROM musicians WHERE is_admin = 1 AND id <> ? LIMIT 1').get(id)
+          : db.prepare('SELECT id FROM musicians WHERE is_admin = 1 LIMIT 1').get();
+        if (!isAdmin && !hasOtherAdmin && !id) {
+          isAdmin = 1;
+        }
+        if (!isAdmin && id) {
+          const current = db.prepare('SELECT is_admin FROM musicians WHERE id = ?').get(id);
+          if (current && current.is_admin && !hasOtherAdmin) {
+            isAdmin = 1;
+          }
+        }
+        if (isAdmin) {
+          db.prepare('UPDATE musicians SET is_admin = 0').run();
+        }
         if (id) {
-          db.prepare('UPDATE musicians SET first_name = ?, last_name = ?, instrument_id = ?, color = ?, email = ?, phone = ?, updated_at = datetime(\'now\') WHERE id = ?')
-            .run(firstName, lastName, instrumentId, color, email, phone, id);
+          db.prepare('UPDATE musicians SET first_name = ?, last_name = ?, instrument_id = ?, is_admin = ?, color = ?, email = ?, phone = ?, updated_at = datetime(\'now\') WHERE id = ?')
+            .run(firstName, lastName, instrumentId, isAdmin, color, email, phone, id);
         } else {
-          db.prepare('INSERT INTO musicians (first_name, last_name, instrument_id, color, email, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))')
-            .run(firstName, lastName, instrumentId, color, email, phone);
+          db.prepare('INSERT INTO musicians (first_name, last_name, instrument_id, is_admin, color, email, phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\'), datetime(\'now\'))')
+            .run(firstName, lastName, instrumentId, isAdmin, color, email, phone);
         }
         break;
       }
@@ -668,7 +685,11 @@ app.post(`${BASE_URL}/admin`, upload.none(), (req, res) => {
       }
       case 'event_delete': {
         const id = Number(req.body.id || 0);
-        if (id) db.prepare('DELETE FROM events WHERE id = ?').run(id);
+        const actorId = Number(req.body.actor_musician_id || 0);
+        const actor = actorId ? db.prepare('SELECT is_admin FROM musicians WHERE id = ?').get(actorId) : null;
+        if (id && actor && actor.is_admin) {
+          db.prepare('DELETE FROM events WHERE id = ?').run(id);
+        }
         break;
       }
       default:
@@ -885,7 +906,7 @@ function importJson(data) {
     clearAll();
     const insertSection = db.prepare('INSERT INTO sections (id, name, color, created_at, updated_at) VALUES (?, ?, ?, ?, ?)');
     const insertInstrument = db.prepare('INSERT INTO instruments (id, name, color, section_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
-    const insertMusician = db.prepare('INSERT INTO musicians (id, first_name, last_name, color, email, phone, instrument_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const insertMusician = db.prepare('INSERT INTO musicians (id, first_name, last_name, is_admin, color, email, phone, instrument_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const insertEvent = db.prepare('INSERT INTO events (id, title, description, date, location, price, organizer, setlist, event_status, is_hidden, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     const insertStatus = db.prepare('INSERT INTO attendance_statuses (id, label, color, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
     const insertAssignment = db.prepare('INSERT INTO event_musicians (id, event_id, musician_id, is_required, notes) VALUES (?, ?, ?, ?, ?)');
@@ -915,6 +936,7 @@ function importJson(data) {
         row.id,
         decodeHtmlEntities(row.first_name || row.firstName),
         decodeHtmlEntities(row.last_name || row.lastName),
+        row.is_admin ? 1 : (row.isAdmin ? 1 : 0),
         row.color || null,
         row.email || null,
         row.phone || null,

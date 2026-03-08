@@ -19,7 +19,12 @@ if (!eventCols.includes('is_hidden')) {
   db.exec("ALTER TABLE events ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0");
 }
 if (!eventCols.includes('event_status')) {
-  db.exec("ALTER TABLE events ADD COLUMN event_status TEXT NOT NULL DEFAULT 'en cours'");
+  db.exec("ALTER TABLE events ADD COLUMN event_status TEXT NOT NULL DEFAULT 'prise de contact'");
+}
+
+const musicianCols = db.prepare("PRAGMA table_info(musicians)").all().map((c) => c.name);
+if (!musicianCols.includes('is_admin')) {
+  db.exec("ALTER TABLE musicians ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
 }
 
 export default db;

@@ -7,7 +7,7 @@ const musiciansList = musicians || [];
 %>
 <%- include('partials/header', { helpers, activePath }) %>
 
-<div class="page admin-page">
+<div class="page admin-page" data-admin-ids="<%= musiciansList.filter((m) => m.isAdmin).map((m) => m.id).join(',') %>">
   <div class="admin-header-wrapper">
     <div>
       <h1 class="page-title">Administration</h1>
@@ -180,11 +180,13 @@ const musiciansList = musicians || [];
               data-musician-first-name="<%= helpers.h(musician.firstName) %>"
               data-musician-last-name="<%= helpers.h(musician.lastName) %>"
               data-musician-instrument-id="<%= musician.instrumentId %>"
+              data-musician-admin="<%= musician.isAdmin ? '1' : '' %>"
               data-musician-color="<%= helpers.h(musician.color || '') %>"
               data-musician-email="<%= helpers.h(musician.email || '') %>"
               data-musician-phone="<%= helpers.h(musician.phone || '') %>">
               <strong><%= helpers.h(musician.firstName + ' ' + musician.lastName) %></strong>
               <span class="chip"><%= helpers.h(musician.instrument.name) %></span>
+              <% if (musician.isAdmin) { %><span class="chip">Admin</span><% } %>
             </button>
           </li>
         <% }) %>
@@ -274,6 +276,10 @@ const musiciansList = musicians || [];
           <label class="form-field"><span>Email</span><input type="email" name="email" placeholder="alice@example.com" /></label>
           <label class="form-field"><span>Téléphone</span><input name="phone" placeholder="+33600000000" /></label>
         </div>
+        <label class="form-field checkbox-field">
+          <input type="checkbox" name="is_admin" value="1" />
+          <span>Administrateur</span>
+        </label>
         <label class="form-field"><span>Couleur (hex)</span><input name="color" placeholder="#f97316" /></label>
         <div class="form-actions">
           <button type="submit" name="action" value="musician_save" class="primary-button">Enregistrer</button>
@@ -294,6 +300,7 @@ const musiciansList = musicians || [];
     <div class="modal-body">
       <form method="post" action="<%= helpers.baseUrl('/admin') %>" class="form" data-admin-form="event">
         <input type="hidden" name="id" value="" />
+        <input type="hidden" name="actor_musician_id" value="" />
         <label class="form-field"><span>Titre</span><input name="title" required /></label>
         <div class="form-grid">
           <label class="form-field"><span>Date et heure</span><input type="datetime-local" name="date" required /></label>
